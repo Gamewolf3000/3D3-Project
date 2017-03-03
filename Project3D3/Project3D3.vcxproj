@@ -149,12 +149,14 @@
     <ClCompile Include="D3D12Wrapper.cpp" />
     <ClCompile Include="EntityHandler.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Pipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CD3DX12Helper.h" />
     <ClInclude Include="D3D12Wrapper.h" />
     <ClInclude Include="EntityHandler.h" />
     <ClInclude Include="EntityJobs.h" />
+    <ClInclude Include="Pipeline.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
