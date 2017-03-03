@@ -6,35 +6,35 @@ Entity * EntityHandler::CreateEntity()
 
 	// Always create a transform job, there is no point in an entity without a transformation anyway
 	// and by doing it at this point we reduce the work needed to be done on the outside
-	transformJobs.push_back(entityVec[entityVec.size() - 1]->entityID);
+	transformJobs.push_back(entityVec[entityVec.size() - 1]->transformID);
 
 	return entityVec[entityVec.size() - 1];
 }
 
 void EntityHandler::BindMesh(Entity * entity, std::string fileName)
 {
-	meshJobs.push_back(MeshJob(entity->entityID, fileName));
+	meshJobs.push_back(MeshJob(entity->meshID, fileName));
 	entity->render = true;
 }
 
 void EntityHandler::BindTexture(Entity * entity, std::string fileName)
 {
-	textureJobs.push_back(TextureJob(entity->entityID, fileName));
+	textureJobs.push_back(TextureJob(entity->textureID, fileName));
 }
 
 void EntityHandler::BindLight(Entity * entity, float lightColour[3], float lightRange)
 {
-	lightJobs.push_back(LightJob(entity->entityID, lightColour, lightRange));
+	lightJobs.push_back(LightJob(entity->lightID, lightColour, lightRange));
 }
 
 void EntityHandler::BindPipeline(Entity * entity, std::string nameOfVS, std::string nameOfPS)
 {
-	pipelineJobs.push_back(PipelineJob(entity->entityID, nameOfVS, nameOfPS));
+	pipelineJobs.push_back(PipelineJob(entity->pipelineID, nameOfVS, nameOfPS));
 }
 
 void EntityHandler::SetTransform(Entity * entity, float pos[3], float rot[3])
 {
-	TransformJob temp(entity->entityID);
+	TransformJob temp(entity->transformID);
 
 	for (int i = 0; i < 3; i++)
 	{

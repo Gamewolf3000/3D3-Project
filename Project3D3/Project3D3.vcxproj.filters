@@ -24,6 +24,9 @@
     <ClCompile Include="EntityHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Pipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="ConstantBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -39,6 +42,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EntityJobs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConstantBuffer.h">

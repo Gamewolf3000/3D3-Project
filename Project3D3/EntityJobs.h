@@ -4,6 +4,9 @@
 #include <Windows.h>
 #include <string>
 
+// entityID represents the specific id of that thing, for example the entityId in transformJob is the transform id of a entity
+// some name change might be good for clarity
+
 struct TransformJob
 {
 private:
