@@ -16,7 +16,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	
 	/*Open debug console*/
 	AllocConsole();
-	freopen("CONOUT$", "w", stdout);
+	FILE* fp;
+	freopen_s(&fp,"CONOUT$", "w", stdout);
 
 	/*Create the graphics wrapper*/
 	D3D12Wrapper graphics(hInstance, nCmdShow, 1280, 720);
