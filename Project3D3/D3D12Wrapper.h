@@ -36,7 +36,7 @@ private:
 	UINT16 windowHeight;
 	UINT16 windowWidth;
 
-	ID3D12Device* device;
+	//ID3D12Device* device;
 	ID3D12GraphicsCommandList* commandList;
 	ID3D12CommandAllocator* commandAllocator;
 	ID3D12CommandQueue* commandQueue;
@@ -100,7 +100,8 @@ public:
 	~D3D12Wrapper();
 
 	void Render(EntityHandler* handler);
-
+	ID3D12Device* device;
+	
 
 
 };

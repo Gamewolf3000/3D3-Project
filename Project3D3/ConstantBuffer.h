@@ -21,6 +21,15 @@ public:
 		VERTEX_SHADER_VIEWPROJECTION,
 		COMPUTE_LIGHT_DATA
 	};
+	/*MUST be set by the caller. Data to create the "size" of the buffers.
+	NOTE: If the above enum gets extra data, so must the struct!*/
+	struct ConstantBufferSizes {
+		UINT16 VERTEX_SHADER_WORLD_SIZE = 0;
+		UINT16 VERTEX_SHADER_VIEWPROJECTION_SIZE = 0;
+		UINT16 COMPUTE_LIGHT_DATA_SIZE = 0;
+
+	};
+
 
 	INT8 CreateConstantBuffer(void* data, size_t dataSize, ConstantBufferType bufferType);
 
@@ -28,7 +37,7 @@ public:
 
 	void BindBuffer(INT8 ID, UINT offset);
 
-	ConstantBufferHandler();
+	ConstantBufferHandler(ConstantBufferSizes sizes = ConstantBufferSizes() , UINT16 maximumNumberOfBindings = 512, ID3D12Device* deviceRef = nullptr);
 	~ConstantBufferHandler();
 
 	ConstantBufferHandler(const ConstantBufferHandler &original) = delete;
@@ -43,11 +52,15 @@ private:
 		ConstantBufferType type;
 	};
 
+	std::map<ConstantBufferType, ID3D12Heap*> constantBufferHeapMap;
+	std::map<ConstantBufferType, ID3D12Resource*> constantBufferResourceMap;
 	std::map<ConstantBufferType, void*> cpu_MappedPtrs;
 	std::vector<ConstantBuffer*> bufferVector;
+
 	UINT8 nrOfBuffers = 0;
-
-
+	UINT16 maximumNumberOfBuffersBoundAtOnce = 0;
+	ConstantBufferSizes constantBufferSizes;
+	ID3D12Device* devicePtr = nullptr;
 
 };
 
