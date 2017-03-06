@@ -224,4 +224,5 @@ void Pipeline::SetPipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cm
 {
 	cmdList->SetGraphicsRootSignature(pipelines[pipelineID]->rootSignature);
 	cmdList->SetPipelineState(pipelines[pipelineID]->pipelineState);
+	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
