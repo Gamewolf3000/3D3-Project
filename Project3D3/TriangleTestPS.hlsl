@@ -1,6 +1,11 @@
 
-
-float4 main(float4 pos : SV_Position) : SV_TARGET
+struct vertexData
 {
-	return float4(0.0f, 1.0f, 1.0f, 1.0f);
+    float4 pos : SV_Position;
+    float4 colour : COLOUR;
+};
+
+float4 main(vertexData data) : SV_TARGET
+{
+	return data.colour;
 }

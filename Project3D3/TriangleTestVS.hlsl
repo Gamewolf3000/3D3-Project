@@ -1,22 +1,35 @@
-
 /*No input data as of now!*/
 
-float4 main(uint index : SV_VertexID ) : SV_POSITION
+cbuffer colourData
 {
-    float4 pos = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float4 colourData[3] : COLOUR;
+}
+
+struct vertexData
+{
+    float4 pos : COLOUR;
+    float4 colour : SV_POSITION;
+};
+
+vertexData main(uint index : SV_VertexID)
+{
+    vertexData outPut;
+    outPut.pos = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    outPut.colour = colourData[index];
+
     switch(index)
     {
         case 0:
-            pos = float4(0.0f, 2.0f, 0.0f, 1.0f);
+            outPut.pos = float4(0.0f, 2.0f, 0.0f, 1.0f);
             break;
         case 1:
-            pos = float4(2.0f, -1.0f, 0.0f, 1.0f);
+            outPut.pos = float4(2.0f, -1.0f, 0.0f, 1.0f);
             break;
         case 2:
-            pos = float4(-1.0f, -1.0f, 0.0f, 1.0f);
+            outPut.pos = float4(-1.0f, -1.0f, 0.0f, 1.0f);
             break;
     }
 
 
-	return pos;
+	return outPut;
 }

@@ -105,6 +105,11 @@ void ConstantBufferHandler::BindBuffer(UINT8 ID, UINT offset)
 
 }
 
+void ConstantBufferHandler::UpdateBuffer(UINT8 ID, void * newData)
+{
+	memcpy(bufferVector[ID]->rawData, newData, bufferVector[ID]->dataSize);
+}
+
 ConstantBufferHandler::ConstantBufferHandler(ConstantBufferSizes sizes, UINT16 maximumNumberOfBindings, ID3D12Device* deviceRef)
 {
 	this->maximumNumberOfBuffersBoundAtOnce = maximumNumberOfBindings;
