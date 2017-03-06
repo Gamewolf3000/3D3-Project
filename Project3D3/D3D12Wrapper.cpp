@@ -436,9 +436,6 @@ int D3D12Wrapper::initialize(HINSTANCE hInstance, int nCmdShow)
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
 	WaitForGPU();
-	//commandAllocator->Reset();
-	//hr = commandList->Reset(commandAllocator, nullptr);
-
 
 	return 0;
 }
