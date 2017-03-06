@@ -31,11 +31,11 @@ public:
 	};
 
 
-	INT8 CreateConstantBuffer(void* data, size_t dataSize, ConstantBufferType bufferType);
+	UINT8 CreateConstantBuffer(void* data, size_t dataSize, ConstantBufferType bufferType);
 
 	void CreateHeap(ConstantBufferType bufferType);
 
-	void BindBuffer(INT8 ID, UINT offset);
+	void BindBuffer(UINT8 ID, UINT offset);
 
 	ConstantBufferHandler(ConstantBufferSizes sizes = ConstantBufferSizes() , UINT16 maximumNumberOfBindings = 512, ID3D12Device* deviceRef = nullptr);
 	~ConstantBufferHandler();

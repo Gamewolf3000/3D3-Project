@@ -1,6 +1,6 @@
 #include "ConstantBuffer.h"
 
-INT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, ConstantBufferType bufferType)
+UINT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, ConstantBufferType bufferType)
 {
 	ConstantBuffer* buffer = new ConstantBuffer;
 	buffer->rawData = new char[dataSize];
@@ -97,7 +97,7 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 
 }
 
-void ConstantBufferHandler::BindBuffer(INT8 ID, UINT offset)
+void ConstantBufferHandler::BindBuffer(UINT8 ID, UINT offset)
 {
 	/*No error checking yet!*/
 	ConstantBuffer* buffer = bufferVector[ID];
