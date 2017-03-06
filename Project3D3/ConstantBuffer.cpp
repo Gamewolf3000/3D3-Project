@@ -1,6 +1,6 @@
 #include "ConstantBuffer.h"
 
-INT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, ConstantBufferType bufferType)
+UINT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, ConstantBufferType bufferType)
 {
 	ConstantBuffer* buffer = new ConstantBuffer;
 	buffer->rawData = new char[dataSize];
@@ -13,8 +13,6 @@ INT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, C
 		/*Taking for granted that the buffers are created during initialization, NOT during rendering*/
 		CreateHeap(bufferType);
 	}
-
-
 
 	bufferVector.push_back(buffer);
 
@@ -64,12 +62,12 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 
 	switch (bufferType)
 	{
-	case VERTEX_SHADER_VIEWPROJECTION:
-		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_VIEWPROJECTION_SIZE;
+	case VERTEX_SHADER_PER_FRAME_DATA:
+		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE;
 		break;
 
-	case VERTEX_SHADER_WORLD:
-		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_WORLD_SIZE;
+	case VERTEX_SHADER_PER_OBJECT_DATA:
+		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE;
 		break;
 
 	case COMPUTE_LIGHT_DATA:
@@ -97,7 +95,7 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 
 }
 
-void ConstantBufferHandler::BindBuffer(INT8 ID, UINT offset)
+void ConstantBufferHandler::BindBuffer(UINT8 ID, UINT offset)
 {
 	/*No error checking yet!*/
 	ConstantBuffer* buffer = bufferVector[ID];
