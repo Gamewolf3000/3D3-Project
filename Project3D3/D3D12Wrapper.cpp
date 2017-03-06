@@ -32,7 +32,24 @@ D3D12Wrapper::~D3D12Wrapper()
 
 void D3D12Wrapper::Render(EntityHandler* handler)
 {
+
+	commandAllocator->Reset();
+	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+
 	ClearBuffer();
+
+	//Set necessary states.
+	commandList->RSSetViewports(1, &vp);
+	commandList->RSSetScissorRects(1, &scissorRect);
+
+	//Indicate that the back buffer will be used as render target.
+	SetResourceTransitionBarrier(commandList,
+		renderTargets[frameIndex],
+		D3D12_RESOURCE_STATE_PRESENT,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+
+	pipelineHandler->SetPipelineState(testPipelineID, commandList);
 
 	for (auto transformJobs : handler->GetTransformJobs())
 	{
@@ -63,7 +80,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	{
 		//get the mesh, texture, pos and other things in here and set them and stuff
 	}
-	pipelineHandler->SetPipelineState(testPipelineID, commandList);
+
 	commandList->DrawInstanced(3, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,
@@ -484,13 +501,11 @@ int D3D12Wrapper::Shutdown()
 
 void D3D12Wrapper::ClearBuffer()
 {
-	/*First to be called*/
 	D3D12_CPU_DESCRIPTOR_HANDLE cdh = renderTargetsHeap->GetCPUDescriptorHandleForHeapStart();
 	cdh.ptr += renderTargetDescriptorSize * frameIndex;
 
-	commandAllocator->Reset();
-	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
-
+	commandList->OMSetRenderTargets(1, &cdh, true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
 	commandList->ClearRenderTargetView(cdh, clearColor, 0, nullptr);
+	commandList->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 }
