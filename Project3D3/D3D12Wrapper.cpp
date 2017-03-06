@@ -9,6 +9,17 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	windowWidth = width;
 	
 	initialize(hInstance, nCmdShow);
+
+	pipelineHandler = new Pipeline(device);
+
+	RootSignatureData rootData;
+	rootData.type.push_back(CBV);
+	rootData.visibility.push_back(VERTEX);
+
+	std::vector<InputLayoutData> layoutData;
+
+	testPipelineID = pipelineHandler->CreatePipeline(rootData, "TriangleTestVS.hlsl", "TriangleTestPS.hlsl", layoutData);
+
 	std::cout << "I think it worked to create the Wrapper. We don't check that." << std::endl;
 }
 
