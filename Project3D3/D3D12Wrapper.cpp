@@ -32,7 +32,7 @@ D3D12Wrapper::~D3D12Wrapper()
 
 void D3D12Wrapper::Render(EntityHandler* handler)
 {
-
+	
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
 
@@ -436,9 +436,8 @@ int D3D12Wrapper::initialize(HINSTANCE hInstance, int nCmdShow)
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
 	WaitForGPU();
-	commandAllocator->Reset();
-	hr = commandList->Reset(commandAllocator, nullptr);
-
+	//commandAllocator->Reset();
+	//hr = commandList->Reset(commandAllocator, nullptr);
 
 
 	return 0;
