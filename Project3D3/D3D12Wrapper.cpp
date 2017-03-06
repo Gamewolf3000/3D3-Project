@@ -36,7 +36,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
 
-	ClearBuffer();
 
 	//Set necessary states.
 	commandList->RSSetViewports(1, &vp);
@@ -48,6 +47,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		D3D12_RESOURCE_STATE_PRESENT,		//state before
 		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
 	);
+
+	ClearBuffer();
 
 	pipelineHandler->SetPipelineState(testPipelineID, commandList);
 
