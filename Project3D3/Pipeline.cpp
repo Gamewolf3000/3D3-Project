@@ -200,6 +200,14 @@ Pipeline::Pipeline(ID3D12Device * dev)
 	device = dev;
 }
 
+Pipeline::~Pipeline()
+{
+	for (auto i : pipelines)
+	{
+		delete i;
+	}
+}
+
 UINT8 Pipeline::CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData)
 {
 	PipelineData* data = new PipelineData();

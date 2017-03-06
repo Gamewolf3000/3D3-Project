@@ -77,6 +77,7 @@ private:
 
 public:
 	Pipeline(ID3D12Device* dev);
+	~Pipeline();
 
 	UINT8 CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData);
 	void SetPipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cmdList);
