@@ -13,6 +13,7 @@
 #include "CD3DX12Helper.h"
 #include "Pipeline.h"
 #include "EntityHandler.h"
+#include "ConstantBuffer.h"
 
 #define NUM_SWAP_BUFFERS 2
 #define NUM_OBJECTS_TO_RENDER_BATCH 500
@@ -57,6 +58,9 @@ private:
 	ID3D12Resource* depthstencil = nullptr;
 
 	Pipeline* pipelineHandler;
+	ConstantBufferHandler *constantBufferHandler;
+	UINT8 constantBufferID;
+	float colours[6][4] = {};
 
 	//maybe
 	ID3D12DescriptorHeap* samplerHeap;

@@ -11,10 +11,24 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	initialize(hInstance, nCmdShow);
 
 	pipelineHandler = new Pipeline(device);
+	auto sizes = ConstantBufferHandler::ConstantBufferSizes();
+	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(float) * 4 * 6;
+	constantBufferHandler = new ConstantBufferHandler(sizes, 512, device);
+
+	for (int i = 0; i < 6; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			colours[i][j] = j*0.5;
+		}
+		colours[i][3] = 1;
+
+	}
+	constantBufferID = constantBufferHandler->CreateConstantBuffer(colours, sizeof(float) * 4 * 6, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
 
 	RootSignatureData rootData;
-	/*rootData.type.push_back(CBV);
-	rootData.visibility.push_back(VERTEX);*/
+	rootData.type.push_back(CBV);
+	rootData.visibility.push_back(VERTEX);
 
 	std::vector<InputLayoutData> layoutData;
 
@@ -28,6 +42,7 @@ D3D12Wrapper::~D3D12Wrapper()
 	Shutdown();
 
 	delete pipelineHandler;
+	delete constantBufferHandler;
 }
 
 void D3D12Wrapper::Render(EntityHandler* handler)
@@ -40,6 +55,16 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	//Set necessary states.
 	commandList->RSSetViewports(1, &vp);
 	commandList->RSSetScissorRects(1, &scissorRect);
+
+	for (int i = 0; i < 6; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			colours[i][j] += 0.0001f;
+			if (colours[i][j] > 1.0f)
+				colours[i][j] -= 1.0f;
+		}
+	}
 
 	//Indicate that the back buffer will be used as render target.
 	SetResourceTransitionBarrier(commandList,
@@ -81,8 +106,11 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	{
 		//get the mesh, texture, pos and other things in here and set them and stuff
 	}
-
-	commandList->DrawInstanced(3, 1, 0, 0);
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
+	constantBufferHandler->UpdateBuffer(constantBufferID, colours);
+	constantBufferHandler->BindBuffer(constantBufferID, 0);
+	commandList->DrawInstanced(6, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,
 		renderTargets[frameIndex],

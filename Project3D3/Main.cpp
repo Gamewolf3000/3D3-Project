@@ -23,16 +23,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	/*Create the graphics wrapper*/
 	D3D12Wrapper graphics(hInstance, nCmdShow, 1280, 720);
 	EntityHandler entityHandler;
-	ConstantBufferHandler::ConstantBufferSizes sizes;
-	sizes.COMPUTE_LIGHT_DATA_SIZE = (5+255) & ~255;
-	sizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE = (5 + 255) & ~255;
-	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = (5 + 255) & ~255;
-	ConstantBufferHandler cbH(sizes, 512U, graphics.device);
 
-	float* test = new float(2.5f);
-
-	cbH.CreateConstantBuffer(test, sizeof(float), ConstantBufferHandler::ConstantBufferType::VERTEX_SHADER_PER_FRAME_DATA);
-
+	
 	/*Looping the shit out of it*/
 	while (WM_QUIT != msg.message)
 	{

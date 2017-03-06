@@ -27,20 +27,20 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 		return;
 	}
 	/*Heap creation goes here, if needed?*/
-	//D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-	//ID3D12Heap* heapPtr = nullptr;
-	//
-	//heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	//heapDesc.NodeMask = 0;
-	//heapDesc.NumDescriptors = maximumNumberOfBuffersBoundAtOnce;
-	//heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	//HRESULT hr = devicePtr->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&heapPtr));
-	//if (FAILED((hr)))
-	//{
-	//	//THROW!
-	//	return;
-	//}
-	//constantBufferHeapMap[bufferType] = heapPtr;
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	ID3D12DescriptorHeap* heapPtr = nullptr;
+	
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	heapDesc.NodeMask = 0;
+	heapDesc.NumDescriptors = maximumNumberOfBuffersBoundAtOnce;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	HRESULT hr = devicePtr->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&heapPtr));
+	if (FAILED((hr)))
+	{
+		//THROW!
+		return;
+	}
+	constantBufferHeapMap[bufferType] = heapPtr;
 
 	D3D12_HEAP_PROPERTIES constantHeapProperties = {};
 	constantHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -75,7 +75,7 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 		break;
 	}
 	ID3D12Resource* resourcePtr;
-	HRESULT hr = devicePtr->CreateCommittedResource(&constantHeapProperties,
+	hr = devicePtr->CreateCommittedResource(&constantHeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&constanstBufferDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -87,6 +87,14 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 		return;
 	}
 	resourcePtr->SetName(L"ConstantBuffer " + bufferType);
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC viewDesc = {};
+	
+	viewDesc.BufferLocation = resourcePtr->GetGPUVirtualAddress();
+	viewDesc.SizeInBytes = (constantBufferSizes[bufferType] + 255) & ~255;
+
+	devicePtr->CreateConstantBufferView(&viewDesc, heapPtr->GetCPUDescriptorHandleForHeapStart());
+
 	constantBufferResourceMap[bufferType] = resourcePtr;
 	void* cpuPtr;
 	D3D12_RANGE range = { 0,0 };
@@ -110,6 +118,18 @@ void ConstantBufferHandler::UpdateBuffer(UINT8 ID, void * newData)
 	memcpy(bufferVector[ID]->rawData, newData, bufferVector[ID]->dataSize);
 }
 
+void ConstantBufferHandler::SetDescriptorHeap(ConstantBufferType bufferType, ID3D12GraphicsCommandList* cmdList)
+{
+	cmdList->SetDescriptorHeaps(1, &constantBufferHeapMap[bufferType]);
+}
+
+void ConstantBufferHandler::SetGraphicsRoot(ConstantBufferType bufferType, UINT index, UINT offset, ID3D12GraphicsCommandList* cmdList)
+{
+	auto GPUHandle = constantBufferHeapMap[bufferType]->GetGPUDescriptorHandleForHeapStart();
+	GPUHandle.ptr + offset*constantBufferSizes[bufferType];
+	cmdList->SetGraphicsRootDescriptorTable(index, GPUHandle);
+}
+
 ConstantBufferHandler::ConstantBufferHandler(ConstantBufferSizes sizes, UINT16 maximumNumberOfBindings, ID3D12Device* deviceRef)
 {
 	this->maximumNumberOfBuffersBoundAtOnce = maximumNumberOfBindings;
@@ -118,9 +138,7 @@ ConstantBufferHandler::ConstantBufferHandler(ConstantBufferSizes sizes, UINT16 m
 }
 
 ConstantBufferHandler::~ConstantBufferHandler()
-{/*
-	for (auto &ptr : cpu_MappedPtrs)
-		delete ptr.second;*/
+{
 	for (auto &resource : constantBufferResourceMap)
 		resource.second->Release();
 	for (auto &heap : constantBufferHeapMap)
