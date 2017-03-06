@@ -36,6 +36,7 @@ public:
 	void CreateHeap(ConstantBufferType bufferType);
 
 	void BindBuffer(UINT8 ID, UINT offset);
+	void UpdateBuffer(UINT8 ID, void* newData);
 
 	ConstantBufferHandler(ConstantBufferSizes sizes = ConstantBufferSizes() , UINT16 maximumNumberOfBindings = 512, ID3D12Device* deviceRef = nullptr);
 	~ConstantBufferHandler();
