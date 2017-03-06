@@ -34,6 +34,12 @@ enum ResourceType
 	SAMPLER
 };
 
+struct ResourceDescription
+{
+	ResourceType type;
+	UINT8 shaderRegister;
+};
+
 enum ShaderVisibility
 {
 	VERTEX,
@@ -42,7 +48,7 @@ enum ShaderVisibility
 
 struct RootSignatureData
 {
-	std::vector<ResourceType> type;
+	std::vector<ResourceDescription> type;
 	std::vector<ShaderVisibility> visibility;
 };
 

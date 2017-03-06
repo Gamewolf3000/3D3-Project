@@ -12,21 +12,39 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 	pipelineHandler = new Pipeline(device);
 	auto sizes = ConstantBufferHandler::ConstantBufferSizes();
-	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(float) * 4 * 6;
+	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(ConstantBufferStruct);
+	sizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE = sizeof(ViewProjectionStruct);
 	constantBufferHandler = new ConstantBufferHandler(sizes, 512, device);
 
+
+	cbStruct = new ConstantBufferStruct;
+
+	MatrixToFloat4x4(cbStruct->worldMatrix, MatrixTranspose(MatrixRotationAroundAxis(VecCreate(0, 0, 1, 0), JEX_PI / 2)));
 	for (int i = 0; i < 6; i++)
 	{
 		for (int j = 0; j < 3; j++)
 		{
-			colours[i][j] = j*0.5;
+			cbStruct->colours[i][j] = j*0.5;
 		}
-		colours[i][3] = 1;
+		cbStruct->colours[i][3] = 1;
 
 	}
-	constantBufferID = constantBufferHandler->CreateConstantBuffer(colours, sizeof(float) * 4 * 6, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
+
+	vpStruct = new ViewProjectionStruct;
+
+	MatrixToFloat4x4(vpStruct->viewMatrix, MatrixTranspose(MatrixViewLH(VecCreate(0, 0, -10, 1), VecCreate(0, 0, 0, 1), VecCreate(0, 1, 0, 0))));
+	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
+
+	constantBufferID = constantBufferHandler->CreateConstantBuffer(cbStruct, sizeof(ConstantBufferStruct), ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
+	vpID = constantBufferHandler->CreateConstantBuffer(vpStruct, sizeof(ViewProjectionStruct), ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
 
 	RootSignatureData rootData;
+	ResourceDescription CBV;
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData.type.push_back(CBV);
+	rootData.visibility.push_back(VERTEX);
+	CBV.shaderRegister = 1;
 	rootData.type.push_back(CBV);
 	rootData.visibility.push_back(VERTEX);
 
@@ -55,14 +73,17 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	//Set necessary states.
 	commandList->RSSetViewports(1, &vp);
 	commandList->RSSetScissorRects(1, &scissorRect);
-
+	rotation += 0.001;
+	if (rotation >= JEX_PI * 2)
+		rotation -= JEX_PI * 2;
+	MatrixToFloat4x4(cbStruct->worldMatrix, MatrixTranspose(MatrixRotationAroundAxis(VecCreate(0, 0, 1, 0), rotation)));
 	for (int i = 0; i < 6; i++)
 	{
 		for (int j = 0; j < 3; j++)
 		{
-			colours[i][j] += 0.0001f;
-			if (colours[i][j] > 1.0f)
-				colours[i][j] -= 1.0f;
+			cbStruct->colours[i][j] += 0.0001f;
+			if (cbStruct->colours[i][j] > 1.0f)
+				cbStruct->colours[i][j] -= 1.0f;
 		}
 	}
 
@@ -108,8 +129,12 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	}
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
-	constantBufferHandler->UpdateBuffer(constantBufferID, colours);
+	constantBufferHandler->UpdateBuffer(constantBufferID, cbStruct);
 	constantBufferHandler->BindBuffer(constantBufferID, 0);
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
+	constantBufferHandler->UpdateBuffer(vpID, vpStruct);
+	constantBufferHandler->BindBuffer(vpID, 0);
 	commandList->DrawInstanced(6, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,
