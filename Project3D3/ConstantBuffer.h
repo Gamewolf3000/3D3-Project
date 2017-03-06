@@ -17,15 +17,15 @@ class ConstantBufferHandler
 public:
 	/*WARNING: Must check the "size" of the buffers and change accordingly. Later point?*/
 	enum ConstantBufferType {
-		VERTEX_SHADER_WORLD,
-		VERTEX_SHADER_VIEWPROJECTION,
+		VERTEX_SHADER_PER_OBJECT_DATA,
+		VERTEX_SHADER_PER_FRAME_DATA,
 		COMPUTE_LIGHT_DATA
 	};
 	/*MUST be set by the caller. Data to create the "size" of the buffers.
 	NOTE: If the above enum gets extra data, so must the struct!*/
 	struct ConstantBufferSizes {
-		UINT16 VERTEX_SHADER_WORLD_SIZE = 0;
-		UINT16 VERTEX_SHADER_VIEWPROJECTION_SIZE = 0;
+		UINT16 VERTEX_SHADER_PER_OBJECT_DATA_SIZE = 0;
+		UINT16 VERTEX_SHADER_PER_FRAME_DATA_SIZE = 0;
 		UINT16 COMPUTE_LIGHT_DATA_SIZE = 0;
 
 	};

@@ -3,7 +3,7 @@
 
 float4 main(uint index : SV_VertexID ) : SV_POSITION
 {
-    float4 pos;
+    float4 pos = float4(0.0f, 0.0f, 0.0f, 1.0f);
     switch(index)
     {
         case 0:

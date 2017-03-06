@@ -14,8 +14,6 @@ UINT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, 
 		CreateHeap(bufferType);
 	}
 
-
-
 	bufferVector.push_back(buffer);
 
 	return nrOfBuffers++;
@@ -64,12 +62,12 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 
 	switch (bufferType)
 	{
-	case VERTEX_SHADER_VIEWPROJECTION:
-		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_VIEWPROJECTION_SIZE;
+	case VERTEX_SHADER_PER_FRAME_DATA:
+		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE;
 		break;
 
-	case VERTEX_SHADER_WORLD:
-		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_WORLD_SIZE;
+	case VERTEX_SHADER_PER_OBJECT_DATA:
+		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE;
 		break;
 
 	case COMPUTE_LIGHT_DATA:
