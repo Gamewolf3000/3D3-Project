@@ -27,7 +27,18 @@ public:
 		UINT16 VERTEX_SHADER_PER_OBJECT_DATA_SIZE = 0;
 		UINT16 VERTEX_SHADER_PER_FRAME_DATA_SIZE = 0;
 		UINT16 COMPUTE_LIGHT_DATA_SIZE = 0;
-
+		UINT16 operator[](UINT index)
+		{
+			switch (index)
+			{
+			case 0:
+				return VERTEX_SHADER_PER_OBJECT_DATA_SIZE;
+			case 1:
+				return VERTEX_SHADER_PER_FRAME_DATA_SIZE;
+			case 2:
+				return COMPUTE_LIGHT_DATA_SIZE;
+			}
+		}
 	};
 
 
@@ -37,6 +48,8 @@ public:
 
 	void BindBuffer(UINT8 ID, UINT offset);
 	void UpdateBuffer(UINT8 ID, void* newData);
+	void SetDescriptorHeap(ConstantBufferType bufferType, ID3D12GraphicsCommandList* cmdList);
+	void SetGraphicsRoot(ConstantBufferType bufferType, UINT index, UINT offset, ID3D12GraphicsCommandList* cmdList);
 
 	ConstantBufferHandler(ConstantBufferSizes sizes = ConstantBufferSizes() , UINT16 maximumNumberOfBindings = 512, ID3D12Device* deviceRef = nullptr);
 	~ConstantBufferHandler();
@@ -53,7 +66,7 @@ private:
 		ConstantBufferType type;
 	};
 
-	std::map<ConstantBufferType, ID3D12Heap*> constantBufferHeapMap;
+	std::map<ConstantBufferType, ID3D12DescriptorHeap*> constantBufferHeapMap;
 	std::map<ConstantBufferType, ID3D12Resource*> constantBufferResourceMap;
 	std::map<ConstantBufferType, void*> cpu_MappedPtrs;
 	std::vector<ConstantBuffer*> bufferVector;

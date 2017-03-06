@@ -5,7 +5,7 @@ struct vertexData
     float4 colour : COLOUR;
 };
 
-float4 main(vertexData data) : SV_TARGET
+float4 main(vertexData data) : SV_Target
 {
 	return data.colour;
 }
