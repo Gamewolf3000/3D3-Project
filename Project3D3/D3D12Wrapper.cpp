@@ -15,6 +15,8 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 D3D12Wrapper::~D3D12Wrapper()
 {
 	Shutdown();
+	int fuckingWork;
+	fuckingWork = true;
 }
 
 void D3D12Wrapper::Render(EntityHandler* handler)
