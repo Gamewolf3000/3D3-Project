@@ -1,21 +1,21 @@
 /*No input data as of now!*/
 
-cbuffer colourData
-{
-    float4 colourData[3] : COLOUR;
-}
+//cbuffer colourData : register(b0)
+//{
+//    float4 colourData[3] : COLOUR;
+//}
 
 struct vertexData
 {
-    float4 pos : COLOUR;
-    float4 colour : SV_POSITION;
+    float4 pos : SV_POSITION;
+    float4 colour : COLOUR;
 };
 
 vertexData main(uint index : SV_VertexID)
 {
     vertexData outPut;
     outPut.pos = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    outPut.colour = colourData[index];
+    outPut.colour = float4(1.0f, 1.0f, 1.0f, 1.0f); //colourData[index];
 
     switch(index)
     {

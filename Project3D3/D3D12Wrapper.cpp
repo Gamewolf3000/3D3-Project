@@ -13,8 +13,8 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	pipelineHandler = new Pipeline(device);
 
 	RootSignatureData rootData;
-	rootData.type.push_back(CBV);
-	rootData.visibility.push_back(VERTEX);
+	/*rootData.type.push_back(CBV);
+	rootData.visibility.push_back(VERTEX);*/
 
 	std::vector<InputLayoutData> layoutData;
 
@@ -63,6 +63,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	{
 		//get the mesh, texture, pos and other things in here and set them and stuff
 	}
+	pipelineHandler->SetPipelineState(testPipelineID, commandList);
+	commandList->DrawInstanced(3, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,
 		renderTargets[frameIndex],

@@ -40,7 +40,7 @@ void Pipeline::CreateRootSignature(PipelineData * data, RootSignatureData rootDa
 	}
 
 	CD3DX12_ROOT_SIGNATURE_DESC rsDesc;
-	rsDesc.Init(rootData.type.size(), rootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	rsDesc.Init((UINT)rootData.type.size(), rootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	ID3DBlob* sBlob;
 	HRESULT hr = D3D12SerializeRootSignature(
@@ -190,7 +190,7 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 		gpsd.BlendState.RenderTarget[i] = defaultRTdesc;
 
 	hr = device->CreateGraphicsPipelineState(&gpsd, IID_PPV_ARGS(&data->pipelineState));
-
+	data->pipelineState->SetName(L"TestState");
 	vertexBlob->Release();
 	pixelBlob->Release();
 }
@@ -217,7 +217,7 @@ UINT8 Pipeline::CreatePipeline(RootSignatureData rootData, std::string vs, std::
 
 	pipelines.push_back(data);
 
-	return pipelines.size() - 1;
+	return (UINT8)pipelines.size() - 1;
 }
 
 void Pipeline::SetPipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cmdList)
