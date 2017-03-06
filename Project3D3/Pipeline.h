@@ -15,18 +15,6 @@
 #include <string>
 #include <vector>
 
-template<class Interface>
-inline void SafeRelease(
-	Interface **ppInterfaceToRelease)
-{
-	if (*ppInterfaceToRelease != NULL)
-	{
-		(*ppInterfaceToRelease)->Release();
-
-		(*ppInterfaceToRelease) = NULL;
-	}
-}
-
 struct PipelineData
 {
 	ID3D12RootSignature* rootSignature = nullptr;
@@ -68,7 +56,7 @@ enum InputDataType
 
 struct InputLayoutData
 {
-	std::string inputName = "";
+	std::wstring inputName = L"";
 	InputDataType dataType;
 	UINT8 arraySize;
 
@@ -80,7 +68,6 @@ private:
 	Pipeline();
 
 	ID3D12Device* device;
-	ID3D12GraphicsCommandList* commandList;
 
 	std::vector<PipelineData*> pipelines;
 
@@ -89,9 +76,10 @@ private:
 
 
 public:
-	Pipeline(ID3D12Device* dev, ID3D12GraphicsCommandList* cmdList);
+	Pipeline(ID3D12Device* dev);
 
-	void CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData);
+	UINT8 CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData);
+	void SetPipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cmdList);
 
 };
 

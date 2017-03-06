@@ -11,6 +11,7 @@
 #pragma comment (lib, "d3dcompiler.lib")
 
 #include "CD3DX12Helper.h"
+#include "Pipeline.h"
 #include "EntityHandler.h"
 
 #define NUM_SWAP_BUFFERS 2
@@ -54,6 +55,8 @@ private:
 	ID3D12Resource* renderTargets[NUM_SWAP_BUFFERS];
 	ID3D12DescriptorHeap* depthStencileHeap = nullptr;
 	ID3D12Resource* depthstencil = nullptr;
+
+	Pipeline* pipelineHandler;
 
 	//maybe
 	ID3D12DescriptorHeap* samplerHeap;
@@ -101,6 +104,8 @@ public:
 
 	void Render(EntityHandler* handler);
 	ID3D12Device* device;
+
+	UINT8 testPipelineID = -1;
 	
 
 

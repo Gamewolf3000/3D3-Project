@@ -99,28 +99,56 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 						// https://msdn.microsoft.com/en-us/library/windows/desktop/hh968107(v=vs.85).aspx
 	);
 
-	//D3D12_INPUT_ELEMENT_DESC* inputElementDesc = new D3D12_INPUT_ELEMENT_DESC[layoutData.size()];
-	//for (auto input : layoutData)
-	//{
-	//	// Set all the things in here
-	//}
+	int totalLayoutSize = 0;
+
+	for (auto input : layoutData)
+	{
+		totalLayoutSize = input.arraySize;
+	}
+
+	D3D12_INPUT_ELEMENT_DESC* inputElementDesc = new D3D12_INPUT_ELEMENT_DESC[totalLayoutSize];
+	int nrOfSet = 0;
+
+	for (int i = 0; i < layoutData.size(); i++)
+	{
+		for (UINT j = 0; j < layoutData[i].arraySize; j++)
+		{
+			if (layoutData[i].dataType == InputDataType::FLOAT32_4)
+			{
+				inputElementDesc[nrOfSet] = {(LPCSTR)layoutData[i].inputName.c_str(), j, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0};
+			}
+			else if (layoutData[i].dataType == InputDataType::FLOAT32_3)
+			{
+				inputElementDesc[nrOfSet] = { (LPCSTR)layoutData[i].inputName.c_str(), j, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+			}
+			else if (layoutData[i].dataType == InputDataType::FLOAT32_2)
+			{
+				inputElementDesc[nrOfSet] = { (LPCSTR)layoutData[i].inputName.c_str(), j, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+			}
+
+			nrOfSet++;
+		}
+
+		
+		// Set all the things in here
+	}
 
 	////// Input Layout //////
-	D3D12_INPUT_ELEMENT_DESC inputElementDesc[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "POSITION", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16 ,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "POSITION", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32 ,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL"	, 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 48 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL"	, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 64 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL"	, 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 80 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "UV" , 0, DXGI_FORMAT_R32G32_FLOAT, 0, 96 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "UV" , 1, DXGI_FORMAT_R32G32_FLOAT, 0, 104 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "UV" , 2, DXGI_FORMAT_R32G32_FLOAT, 0, 112 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
+	//D3D12_INPUT_ELEMENT_DESC inputElementDesc[] = {
+	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "POSITION", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16 ,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "POSITION", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32 ,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "NORMAL"	, 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 48 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "NORMAL"	, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 64 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "NORMAL"	, 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 80 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "UV" , 0, DXGI_FORMAT_R32G32_FLOAT, 0, 96 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "UV" , 1, DXGI_FORMAT_R32G32_FLOAT, 0, 104 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "UV" , 2, DXGI_FORMAT_R32G32_FLOAT, 0, 112 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	//};
 
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
 	inputLayoutDesc.pInputElementDescs = inputElementDesc;
-	inputLayoutDesc.NumElements = ARRAYSIZE(inputElementDesc);
+	inputLayoutDesc.NumElements = totalLayoutSize; // ARRAYSIZE(inputElementDesc);
 
 	////// Pipline State //////
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpsd = {};
@@ -167,16 +195,25 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 	pixelBlob->Release();
 }
 
-Pipeline::Pipeline(ID3D12Device * dev, ID3D12GraphicsCommandList * cmdList)
+Pipeline::Pipeline(ID3D12Device * dev)
 {
 	device = dev;
-	commandList = cmdList;
 }
 
-void Pipeline::CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData)
+UINT8 Pipeline::CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData)
 {
 	PipelineData* data = new PipelineData();
 
 	CreateRootSignature(data, rootData);
 	CreatePipelineStateObject(data, vs, ps, layoutData);
+
+	pipelines.push_back(data);
+
+	return pipelines.size() - 1;
+}
+
+void Pipeline::SetPipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cmdList)
+{
+	cmdList->SetGraphicsRootSignature(pipelines[pipelineID]->rootSignature);
+	cmdList->SetPipelineState(pipelines[pipelineID]->pipelineState);
 }
