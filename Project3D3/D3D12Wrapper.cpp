@@ -419,7 +419,7 @@ void D3D12Wrapper::SetResourceTransitionBarrier(ID3D12GraphicsCommandList * comm
 
 int D3D12Wrapper::initialize(HINSTANCE hInstance, int nCmdShow)
 {
-	InitializeWindow(hInstance, nCmdShow);					//1. Create Window
+	InitializeWindow(hInstance, nCmdShow);	//1. Create Window
 
 	CreateDirect3DDevice();					//2. Create Device
 	CreateCommandInterfacesAndSwapChain();	//3. Create CommandQueue and SwapChain
@@ -429,7 +429,6 @@ int D3D12Wrapper::initialize(HINSTANCE hInstance, int nCmdShow)
 	CreateRenderTargets();					//5. Create render targets for backbuffer
 	CreateViewportAndScissorRect();
 	CreateRenderHeap();
-	//CreateConstantBufferHeap();
 	CreateDepthStencil();
 
 	commandList->Close();
