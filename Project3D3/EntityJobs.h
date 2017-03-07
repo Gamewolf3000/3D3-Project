@@ -12,7 +12,7 @@ struct TransformJob
 private:
 	TransformJob();
 public:
-	TransformJob(INT8& entID)
+	TransformJob(INT8 entID)
 	{
 		entityID = entID;
 	}
@@ -28,7 +28,7 @@ struct MeshJob
 private:
 	MeshJob();
 public:
-	MeshJob(INT8& entID, std::string nameOfFile)
+	MeshJob(INT8 entID, std::string nameOfFile)
 	{
 		entityID = entID;
 		fileName = nameOfFile;
@@ -43,7 +43,7 @@ struct TextureJob
 private:
 	TextureJob();
 public:
-	TextureJob(INT8& entID, std::string nameOfFile)
+	TextureJob(INT8 entID, std::string nameOfFile)
 	{
 		entityID = entID;
 		fileName = nameOfFile;
@@ -58,7 +58,7 @@ struct LightJob
 private:
 	LightJob();
 public:
-	LightJob(INT8& entID, float lightColour[3], float lightRange)
+	LightJob(INT8 entID, float lightColour[3], float lightRange)
 	{
 		entityID = entID;
 
@@ -79,7 +79,7 @@ struct PipelineJob
 private:
 	PipelineJob();
 public:
-	PipelineJob(INT8& entID, std::string nameOfVS, std::string nameOfPS)
+	PipelineJob(INT8 entID, std::string nameOfVS, std::string nameOfPS)
 	{
 		entityID = entID;
 

@@ -3,7 +3,6 @@
 #pragma once
 
 #include <fstream>
-#include <DirectXMath.h>
 #include <string>
 
 #include "JEXMath.h"

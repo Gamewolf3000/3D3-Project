@@ -26,25 +26,32 @@ struct RenderData
 	UINT nrOfIndices = 0;
 	UINT* indexBuffer = 0;
 
+	D3D12_VERTEX_BUFFER_VIEW vBufferView;
+	D3D12_INDEX_BUFFER_VIEW iBufferView;
+
 };
 
 class MeshHandler
 {
 private:
-	ID3D12Device* device;
-	OBJLoader* objLoader;
+	ID3D12Device* device = nullptr;
+	OBJLoader* objLoader = nullptr;
+	ID3D12Resource* bufferResource = nullptr;
 
 	std::vector<MeshData> meshes;
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> vBufferViews;
+	std::vector<D3D12_INDEX_BUFFER_VIEW> iBufferViews;
 
-	RenderData GetMeshAsRawData(INT8 meshID);
-
+	void CreateUploadHeap();
 
 public:
 	MeshHandler(ID3D12Device* dev);
 	~MeshHandler();
 
 	INT8 LoadMesh(std::string fileName);
+	RenderData GetMeshAsRawData(INT8 meshID);
 
+	ID3D12Resource* GetBufferResource();
 
 };
 

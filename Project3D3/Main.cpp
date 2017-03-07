@@ -24,9 +24,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	D3D12Wrapper graphics(hInstance, nCmdShow, 1280, 720);
 	EntityHandler entityHandler;
 
+	Entity* testEnt = entityHandler.CreateEntity();
+	entityHandler.BindMesh(testEnt, "sphere.obj");
+
 	
 	/*Looping the shit out of it*/
-	while (WM_QUIT != msg.message && !GetKeyState(VK_ESCAPE))
+	while (WM_QUIT != msg.message && !(GetKeyState(VK_ESCAPE) & 0x80))
 	{
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
@@ -35,7 +38,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 		else
 		{
-			//Update();
 			graphics.Render(&entityHandler);
 		}
 	}
