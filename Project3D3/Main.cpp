@@ -26,7 +26,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
 	
 	/*Looping the shit out of it*/
-	while (WM_QUIT != msg.message)
+	while (WM_QUIT != msg.message && !GetKeyState(VK_ESCAPE))
 	{
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
