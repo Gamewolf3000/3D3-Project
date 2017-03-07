@@ -18,7 +18,6 @@
 #include "MeshHandler.h"
 
 #define NUM_SWAP_BUFFERS 2
-#define NUM_OBJECTS_TO_RENDER_BATCH 500
 
 template<class Interface>
 inline void SafeRelease(
@@ -128,6 +127,7 @@ public:
 	void Render(EntityHandler* handler);
 
 	UINT8 testPipelineID = -1;
+	UINT8 meshPipelineID = -1;
 	
 
 

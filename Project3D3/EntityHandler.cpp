@@ -13,13 +13,13 @@ Entity * EntityHandler::CreateEntity()
 
 void EntityHandler::BindMesh(Entity * entity, std::string fileName)
 {
-	meshJobs.push_back(MeshJob(entity->meshID, fileName));
+	meshJobs.push_back(MeshJob(entity->entityID, fileName));
 	entity->render = true;
 }
 
 void EntityHandler::BindTexture(Entity * entity, std::string fileName)
 {
-	textureJobs.push_back(TextureJob(entity->textureID, fileName));
+	textureJobs.push_back(TextureJob(entity->entityID, fileName));
 }
 
 void EntityHandler::BindLight(Entity * entity, float lightColour[3], float lightRange)
@@ -29,12 +29,12 @@ void EntityHandler::BindLight(Entity * entity, float lightColour[3], float light
 
 void EntityHandler::BindPipeline(Entity * entity, std::string nameOfVS, std::string nameOfPS)
 {
-	pipelineJobs.push_back(PipelineJob(entity->pipelineID, nameOfVS, nameOfPS));
+	pipelineJobs.push_back(PipelineJob(entity->entityID, nameOfVS, nameOfPS));
 }
 
 void EntityHandler::SetTransform(Entity * entity, float pos[3], float rot[3])
 {
-	TransformJob temp(entity->transformID);
+	TransformJob temp(entity->entityID);
 
 	for (int i = 0; i < 3; i++)
 	{

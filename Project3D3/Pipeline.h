@@ -62,7 +62,7 @@ enum InputDataType
 
 struct InputLayoutData
 {
-	std::wstring inputName = L"";
+	LPCSTR inputName = "";
 	InputDataType dataType;
 	UINT8 arraySize;
 

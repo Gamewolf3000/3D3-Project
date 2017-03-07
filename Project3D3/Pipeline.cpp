@@ -103,10 +103,11 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 
 	for (auto input : layoutData)
 	{
-		totalLayoutSize = input.arraySize;
+		totalLayoutSize += input.arraySize;
 	}
 
 	D3D12_INPUT_ELEMENT_DESC* inputElementDesc = new D3D12_INPUT_ELEMENT_DESC[totalLayoutSize];
+	D3D12_INPUT_ELEMENT_DESC uglyTest;
 	int nrOfSet = 0;
 
 	for (int i = 0; i < layoutData.size(); i++)
@@ -115,15 +116,15 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 		{
 			if (layoutData[i].dataType == InputDataType::FLOAT32_4)
 			{
-				inputElementDesc[nrOfSet] = {(LPCSTR)layoutData[i].inputName.c_str(), j, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0};
+				inputElementDesc[nrOfSet] = {layoutData[i].inputName, j, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 			}
 			else if (layoutData[i].dataType == InputDataType::FLOAT32_3)
 			{
-				inputElementDesc[nrOfSet] = { (LPCSTR)layoutData[i].inputName.c_str(), j, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+				inputElementDesc[nrOfSet] = { layoutData[i].inputName, j, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 			}
 			else if (layoutData[i].dataType == InputDataType::FLOAT32_2)
 			{
-				inputElementDesc[nrOfSet] = { (LPCSTR)layoutData[i].inputName.c_str(), j, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+				inputElementDesc[nrOfSet] = { layoutData[i].inputName, j, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 			}
 
 			nrOfSet++;

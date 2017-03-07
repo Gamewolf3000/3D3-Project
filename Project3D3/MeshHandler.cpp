@@ -29,13 +29,52 @@ RenderData MeshHandler::GetMeshAsRawData(INT8 meshID)
 	returnData.nrOfTriangles = temp.nrOfIndices / 3;
 	returnData.nrOfIndices = temp.nrOfIndices;
 	returnData.indexBuffer = temp.indexBuffer;
+	returnData.vBufferView = vBufferViews[meshID];
+	returnData.iBufferView = iBufferViews[meshID];
 
 	return returnData;
 }
 
-MeshHandler::MeshHandler(ID3D12Device * dev)
+ID3D12Resource * MeshHandler::GetBufferResource()
+{
+	return bufferResource;
+}
+
+void MeshHandler::CreateUploadHeap()
+{
+	D3D12_HEAP_PROPERTIES hp = {};
+	hp.Type = D3D12_HEAP_TYPE_UPLOAD;
+	hp.CreationNodeMask = 1;
+	hp.VisibleNodeMask = 1;
+
+	D3D12_RESOURCE_DESC rd = {};
+	rd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	rd.Width = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D)) * 100000;
+	rd.Height = 1;
+	rd.DepthOrArraySize = 1;
+	rd.MipLevels = 1;
+	rd.SampleDesc.Count = 1;
+	rd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	//Creates both a resource and an implicit heap, such that the heap is big enough
+	//to contain the entire resource and the resource is mapped to the heap. 
+	device->CreateCommittedResource(
+		&hp,
+		D3D12_HEAP_FLAG_NONE,
+		&rd,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&bufferResource));
+
+	bufferResource->SetName(L"vb heap");
+}
+
+MeshHandler::MeshHandler(ID3D12Device* dev)
 {
 	objLoader = new OBJLoader(L"");
+	device = dev;
+
+	CreateUploadHeap();
 }
 
 MeshHandler::~MeshHandler()
@@ -51,7 +90,33 @@ MeshHandler::~MeshHandler()
 
 INT8 MeshHandler::LoadMesh(std::string fileName)
 {
+
+	for (int i = 0; i < meshes.size(); i++)
+	{
+		if (fileName == meshes[i].identifier)
+		{
+			return i;
+		}
+	}
+
+	int sizeOfVertex = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D));
+
 	meshes.push_back(objLoader->LoadOBJFile(fileName));
+
+	// Create view here
+	D3D12_VERTEX_BUFFER_VIEW vBufferView;
+	vBufferView.BufferLocation = bufferResource->GetGPUVirtualAddress();
+	vBufferView.SizeInBytes = meshes[meshes.size() - 1].nrOfIndices * sizeOfVertex;
+	vBufferView.StrideInBytes = sizeOfVertex;
+
+	vBufferViews.push_back(vBufferView);
+
+	D3D12_INDEX_BUFFER_VIEW iBufferView;
+	iBufferView.BufferLocation = bufferResource->GetGPUVirtualAddress();
+	iBufferView.SizeInBytes = sizeof(UINT) * meshes[meshes.size() - 1].nrOfIndices;
+	iBufferView.Format = DXGI_FORMAT_R32_UINT;
+
+	iBufferViews.push_back(iBufferView);
 
 	return meshes.size() - 1;
 }

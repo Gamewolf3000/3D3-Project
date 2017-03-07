@@ -52,6 +52,39 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 	testPipelineID = pipelineHandler->CreatePipeline(rootData, "TriangleTestVS.hlsl", "TriangleTestPS.hlsl", layoutData);
 
+
+	RootSignatureData rootData2;
+	ResourceDescription CBV2;
+	CBV2.shaderRegister = 0;
+	CBV2.type = ResourceType::CBV;
+	rootData2.type.push_back(CBV2);
+	rootData2.visibility.push_back(VERTEX);
+	CBV2.shaderRegister = 1;
+	rootData2.type.push_back(CBV2);
+	rootData2.visibility.push_back(VERTEX);
+
+	std::vector<InputLayoutData> layoutData2;
+	InputLayoutData tempLayout;
+	tempLayout.inputName = "POSITION";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "TEXCOORDS";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_2;
+	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "NORMAL";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
+
+	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "TriangleTestPS.hlsl", layoutData2);
+
+
+	meshHandler = new MeshHandler(device);
+	meshHandler->LoadMesh("sphere.obj");
+
+
 	std::cout << "I think it worked to create the Wrapper. We don't check that." << std::endl;
 }
 
@@ -60,11 +93,13 @@ D3D12Wrapper::~D3D12Wrapper()
 	Shutdown();
 
 	delete pipelineHandler;
+	delete meshHandler;
 	delete constantBufferHandler;
 }
 
 void D3D12Wrapper::Render(EntityHandler* handler)
 {
+	const std::vector<Entity*> &entities = handler->GetEntityVector();
 	
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
@@ -106,7 +141,9 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	for (auto meshJobs : handler->GetMeshJobs())
 	{
 		//Handle the job
+		entities[meshJobs.entityID]->meshID = meshHandler->LoadMesh(meshJobs.fileName);
 	}
+	handler->GetMeshJobs().clear();
 
 	for (auto textureJobs : handler->GetTextureJobs())
 	{
@@ -123,10 +160,35 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		//Handle the job
 	}
 
-	for (auto entities : handler->GetEntityVector())
+	D3D12_RANGE range = { 0, 0 };
+	ID3D12Resource* upload = meshHandler->GetBufferResource();
+
+	for (int i = 0; i < entities.size(); i++)
 	{
-		//get the mesh, texture, pos and other things in here and set them and stuff
+		if (entities[i]->render)
+		{
+			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
+
+			void* bufferData = rData.data;
+			void* dataBegin;
+			upload->Map(0, &range, &dataBegin);
+			memcpy(dataBegin, bufferData, rData.size);
+			upload->Unmap(0, nullptr);
+
+			//D3D12_VERTEX_BUFFER_VIEW view;
+			//view.BufferLocation = bufferResource->GetGPUVirtualAddress();
+			//view.SizeInBytes = SIZE_OF_HEAP;
+			//view.StrideInBytes = 0;
+
+			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
+			commandList->IASetIndexBuffer(&rData.iBufferView);
+
+			commandList->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
+
+		}
 	}
+
+
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
 	constantBufferHandler->UpdateBuffer(constantBufferID, cbStruct);
@@ -364,38 +426,38 @@ void D3D12Wrapper::CreateViewportAndScissorRect()
 
 void D3D12Wrapper::CreateRenderHeap()
 {
-	if (bufferResource)
-		bufferResource->Release();
+	//if (bufferResource)
+	//	bufferResource->Release();
 
-	//Note: using upload heaps to transfer static data like vert buffers is not 
-	//recommended. Every time the GPU needs it, the upload heap will be marshalled 
-	//over. Please read up on Default Heap usage. An upload heap is used here for 
-	//code simplicity and because there are very few vertices to actually transfer.
-	D3D12_HEAP_PROPERTIES hp = {};
-	hp.Type = D3D12_HEAP_TYPE_UPLOAD;
-	hp.CreationNodeMask = 1;
-	hp.VisibleNodeMask = 1;
+	////Note: using upload heaps to transfer static data like vert buffers is not 
+	////recommended. Every time the GPU needs it, the upload heap will be marshalled 
+	////over. Please read up on Default Heap usage. An upload heap is used here for 
+	////code simplicity and because there are very few vertices to actually transfer.
+	//D3D12_HEAP_PROPERTIES hp = {};
+	//hp.Type = D3D12_HEAP_TYPE_UPLOAD;
+	//hp.CreationNodeMask = 1;
+	//hp.VisibleNodeMask = 1;
 
-	D3D12_RESOURCE_DESC rd = {};
-	rd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	rd.Width = NUM_OBJECTS_TO_RENDER_BATCH * 3 * 4;;
-	rd.Height = 1;
-	rd.DepthOrArraySize = 1;
-	rd.MipLevels = 1;
-	rd.SampleDesc.Count = 1;
-	rd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	//D3D12_RESOURCE_DESC rd = {};
+	//rd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	//rd.Width = NUM_OBJECTS_TO_RENDER_BATCH * 3 * 4;;
+	//rd.Height = 1;
+	//rd.DepthOrArraySize = 1;
+	//rd.MipLevels = 1;
+	//rd.SampleDesc.Count = 1;
+	//rd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-	//Creates both a resource and an implicit heap, such that the heap is big enough
-	//to contain the entire resource and the resource is mapped to the heap. 
-	device->CreateCommittedResource(
-		&hp,
-		D3D12_HEAP_FLAG_NONE,
-		&rd,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&bufferResource));
+	////Creates both a resource and an implicit heap, such that the heap is big enough
+	////to contain the entire resource and the resource is mapped to the heap. 
+	//device->CreateCommittedResource(
+	//	&hp,
+	//	D3D12_HEAP_FLAG_NONE,
+	//	&rd,
+	//	D3D12_RESOURCE_STATE_GENERIC_READ,
+	//	nullptr,
+	//	IID_PPV_ARGS(&bufferResource));
 
-	bufferResource->SetName(L"vb heap");
+	//bufferResource->SetName(L"vb heap");
 }
 
 void D3D12Wrapper::CreateDepthStencil()
