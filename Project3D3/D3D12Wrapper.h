@@ -16,6 +16,7 @@
 #include "EntityHandler.h"
 #include "ConstantBuffer.h"
 #include "MeshHandler.h"
+#include "LightHandler.h"
 
 #define NUM_SWAP_BUFFERS 2
 #define NUM_OBJECTS_TO_RENDER_BATCH 500
@@ -35,8 +36,6 @@ inline void SafeRelease(
 struct ConstantBufferStruct
 {
 	Float4x4 worldMatrix;
-	float colours[6][4] = {};
-
 };
 
 struct ViewProjectionStruct
@@ -75,8 +74,10 @@ private:
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
 	ConstantBufferHandler *constantBufferHandler;
+	LightHandler* lightHandler;
 	UINT8 constantBufferID;
 	UINT8 vpID;
+	UINT8 lightID;
 	float rotation = JEX_PI / 2;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;

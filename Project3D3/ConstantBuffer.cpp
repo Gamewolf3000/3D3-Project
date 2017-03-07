@@ -1,6 +1,6 @@
 #include "ConstantBuffer.h"
 
-UINT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, ConstantBufferType bufferType)
+void ConstantBufferHandler::CreateConstantBuffer(INT8 ID, void * data, size_t dataSize, ConstantBufferType bufferType)
 {
 	ConstantBuffer* buffer = new ConstantBuffer;
 	buffer->rawData = new char[dataSize];
@@ -14,9 +14,8 @@ UINT8 ConstantBufferHandler::CreateConstantBuffer(void * data, size_t dataSize, 
 		CreateHeap(bufferType);
 	}
 
-	bufferVector.push_back(buffer);
+	bufferVector[ID] = (buffer);
 
-	return nrOfBuffers++;
 }
 
 void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
@@ -60,20 +59,8 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 	constanstBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	constanstBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-	switch (bufferType)
-	{
-	case VERTEX_SHADER_PER_FRAME_DATA:
-		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE;
-		break;
+	constanstBufferDesc.Width = constantBufferSizes[bufferType] * nrOfBuffers;
 
-	case VERTEX_SHADER_PER_OBJECT_DATA:
-		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE;
-		break;
-
-	case COMPUTE_LIGHT_DATA:
-		constanstBufferDesc.Width = maximumNumberOfBuffersBoundAtOnce * constantBufferSizes.COMPUTE_LIGHT_DATA_SIZE;
-		break;
-	}
 	ID3D12Resource* resourcePtr;
 	hr = devicePtr->CreateCommittedResource(&constantHeapProperties,
 		D3D12_HEAP_FLAG_NONE,
@@ -103,12 +90,12 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 
 }
 
-void ConstantBufferHandler::BindBuffer(UINT8 ID, UINT offset)
+void ConstantBufferHandler::BindBuffer(UINT8 ID, UINT index)
 {
 	/*No error checking yet!*/
 	ConstantBuffer* buffer = bufferVector[ID];
 	char* pointerWithOffset = (char*)cpu_MappedPtrs.find(buffer->type)->second;
-	pointerWithOffset += offset;
+	pointerWithOffset += index*constantBufferSizes[buffer->type];
 	memcpy(pointerWithOffset, buffer->rawData, buffer->dataSize);
 
 }
@@ -135,6 +122,12 @@ ConstantBufferHandler::ConstantBufferHandler(ConstantBufferSizes sizes, UINT16 m
 	this->maximumNumberOfBuffersBoundAtOnce = maximumNumberOfBindings;
 	this->constantBufferSizes = sizes;
 	this->devicePtr = deviceRef;
+
+	CreateHeap(ConstantBufferType::VERTEX_SHADER_PER_OBJECT_DATA);
+	CreateHeap(ConstantBufferType::VERTEX_SHADER_PER_FRAME_DATA);
+	CreateHeap(ConstantBufferType::PIXEL_SHADER_LIGHT_DATA);
+	CreateHeap(ConstantBufferType::COMPUTE_LIGHT_DATA);
+
 }
 
 ConstantBufferHandler::~ConstantBufferHandler()
@@ -145,7 +138,7 @@ ConstantBufferHandler::~ConstantBufferHandler()
 		heap.second->Release();
 	for (auto &buffer : bufferVector)
 	{
-		delete buffer->rawData;
-		delete buffer;
+		delete buffer.second->rawData;
+		delete buffer.second;
 	}
 }

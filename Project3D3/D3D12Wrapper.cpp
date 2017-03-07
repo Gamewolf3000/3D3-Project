@@ -1,5 +1,6 @@
 #include "D3D12Wrapper.h"
 #include <iostream>
+#include "LightHandler.h"
 
 D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT16 height)
 {
@@ -11,32 +12,17 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	initialize(hInstance, nCmdShow);
 
 	pipelineHandler = new Pipeline(device);
+	lightHandler = new LightHandler(512);
 	auto sizes = ConstantBufferHandler::ConstantBufferSizes();
 	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(ConstantBufferStruct);
 	sizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE = sizeof(ViewProjectionStruct);
+	sizes.PIXEL_SHADER_LIGHT_DATA_SIZE = sizeof(LightHandler::PointLight);
 	constantBufferHandler = new ConstantBufferHandler(sizes, 512, device);
-
-
-	cbStruct = new ConstantBufferStruct;
-
-	MatrixToFloat4x4(cbStruct->worldMatrix, MatrixTranspose(MatrixRotationAroundAxis(VecCreate(0, 0, 1, 0), JEX_PI / 2)));
-	for (int i = 0; i < 6; i++)
-	{
-		for (int j = 0; j < 3; j++)
-		{
-			cbStruct->colours[i][j] = j*0.5;
-		}
-		cbStruct->colours[i][3] = 1;
-
-	}
 
 	vpStruct = new ViewProjectionStruct;
 
 	MatrixToFloat4x4(vpStruct->viewMatrix, MatrixTranspose(MatrixViewLH(VecCreate(0, 0, -10, 1), VecCreate(0, 0, 0, 1), VecCreate(0, 1, 0, 0))));
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
-
-	constantBufferID = constantBufferHandler->CreateConstantBuffer(cbStruct, sizeof(ConstantBufferStruct), ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
-	vpID = constantBufferHandler->CreateConstantBuffer(vpStruct, sizeof(ViewProjectionStruct), ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
 
 	RootSignatureData rootData;
 	ResourceDescription CBV;
@@ -47,12 +33,15 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	CBV.shaderRegister = 1;
 	rootData.type.push_back(CBV);
 	rootData.visibility.push_back(VERTEX);
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData.type.push_back(CBV);
+	rootData.visibility.push_back(PIXEL);
 
 	std::vector<InputLayoutData> layoutData;
 
 	testPipelineID = pipelineHandler->CreatePipeline(rootData, "TriangleTestVS.hlsl", "TriangleTestPS.hlsl", layoutData);
 
-	std::cout << "I think it worked to create the Wrapper. We don't check that." << std::endl;
 }
 
 D3D12Wrapper::~D3D12Wrapper()
@@ -73,19 +62,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	//Set necessary states.
 	commandList->RSSetViewports(1, &vp);
 	commandList->RSSetScissorRects(1, &scissorRect);
-	rotation += 0.001;
-	if (rotation >= JEX_PI * 2)
-		rotation -= JEX_PI * 2;
-	MatrixToFloat4x4(cbStruct->worldMatrix, MatrixTranspose(MatrixRotationAroundAxis(VecCreate(0, 0, 1, 0), rotation)));
-	for (int i = 0; i < 6; i++)
-	{
-		for (int j = 0; j < 3; j++)
-		{
-			cbStruct->colours[i][j] += 0.0001f;
-			if (cbStruct->colours[i][j] > 1.0f)
-				cbStruct->colours[i][j] -= 1.0f;
-		}
-	}
 
 	//Indicate that the back buffer will be used as render target.
 	SetResourceTransitionBarrier(commandList,
@@ -97,44 +73,57 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	ClearBuffer();
 
 	pipelineHandler->SetPipelineState(testPipelineID, commandList);
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
 
-	for (auto transformJobs : handler->GetTransformJobs())
+
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
+
+	UINT index = 0;
+	for (auto &transformJobs : handler->GetTransformJobs())
+	{
+		/*Get the constant buffer that contains the transform job -> Update the buffer and bind it*/
+		/*Fetch the data here*/
+		Float4x4 finalMatrix;
+
+		Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
+		MatrixToFloat4x4(finalMatrix, (MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]))*translation);
+
+		constantBufferHandler->UpdateBuffer(transformJobs.entityID, &finalMatrix);
+
+		constantBufferHandler->BindBuffer(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+		//Handle the job
+		index++;
+	}
+
+	for (auto &meshJobs : handler->GetMeshJobs())
 	{
 		//Handle the job
 	}
 
-	for (auto meshJobs : handler->GetMeshJobs())
+	for (auto &textureJobs : handler->GetTextureJobs())
 	{
 		//Handle the job
 	}
 
-	for (auto textureJobs : handler->GetTextureJobs())
+	for (auto &lightJobs : handler->GetLightJobs())
+	{
+		//HANDLE IT
+	}
+
+	for (auto &pipelineJobs : handler->GetPipelineJobs())
 	{
 		//Handle the job
 	}
 
-	for (auto lightJobs : handler->GetLightJobs())
-	{
-		//Handle the job
-	}
-
-	for (auto pipelineJobs : handler->GetPipelineJobs())
-	{
-		//Handle the job
-	}
-
-	for (auto entities : handler->GetEntityVector())
+	for (auto &entities : handler->GetEntityVector())
 	{
 		//get the mesh, texture, pos and other things in here and set them and stuff
 	}
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
-	constantBufferHandler->UpdateBuffer(constantBufferID, cbStruct);
-	constantBufferHandler->BindBuffer(constantBufferID, 0);
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
-	constantBufferHandler->UpdateBuffer(vpID, vpStruct);
-	constantBufferHandler->BindBuffer(vpID, 0);
+
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandList);
 	commandList->DrawInstanced(6, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,
