@@ -59,7 +59,7 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 	constanstBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	constanstBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-	constanstBufferDesc.Width = constantBufferSizes[bufferType] * nrOfBuffers;
+	constanstBufferDesc.Width = constantBufferSizes[bufferType] * maximumNumberOfBuffersBoundAtOnce;
 
 	ID3D12Resource* resourcePtr;
 	hr = devicePtr->CreateCommittedResource(&constantHeapProperties,

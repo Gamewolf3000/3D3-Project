@@ -17,6 +17,7 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(ConstantBufferStruct);
 	sizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE = sizeof(ViewProjectionStruct);
 	sizes.PIXEL_SHADER_LIGHT_DATA_SIZE = sizeof(LightHandler::PointLight);
+	sizes.COMPUTE_LIGHT_DATA_SIZE = sizeof(float); /*To be edited!*/
 	constantBufferHandler = new ConstantBufferHandler(sizes, 512, device);
 
 	vpStruct = new ViewProjectionStruct;
@@ -52,6 +53,10 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	CBV2.shaderRegister = 1;
 	rootData2.type.push_back(CBV2);
 	rootData2.visibility.push_back(VERTEX);
+	CBV2.shaderRegister = 0;
+	CBV2.type = ResourceType::CBV;
+	rootData2.type.push_back(CBV2);
+	rootData2.visibility.push_back(PIXEL);
 
 	std::vector<InputLayoutData> layoutData2;
 	InputLayoutData tempLayout;
