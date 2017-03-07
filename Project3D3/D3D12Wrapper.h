@@ -14,6 +14,7 @@
 #include "Pipeline.h"
 #include "EntityHandler.h"
 #include "ConstantBuffer.h"
+#include "MeshHandler.h"
 
 #define NUM_SWAP_BUFFERS 2
 #define NUM_OBJECTS_TO_RENDER_BATCH 500
@@ -38,7 +39,7 @@ private:
 	UINT16 windowHeight;
 	UINT16 windowWidth;
 
-	//ID3D12Device* device;
+	ID3D12Device* device;
 	ID3D12GraphicsCommandList* commandList;
 	ID3D12CommandAllocator* commandAllocator;
 	ID3D12CommandQueue* commandQueue;
@@ -58,6 +59,7 @@ private:
 	ID3D12Resource* depthstencil = nullptr;
 
 	Pipeline* pipelineHandler;
+	MeshHandler* meshHandler;
 	ConstantBufferHandler *constantBufferHandler;
 	UINT8 constantBufferID;
 	float colours[6][4] = {};
@@ -107,7 +109,6 @@ public:
 	~D3D12Wrapper();
 
 	void Render(EntityHandler* handler);
-	ID3D12Device* device;
 
 	UINT8 testPipelineID = -1;
 	

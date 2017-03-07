@@ -24,7 +24,7 @@ void EntityHandler::BindTexture(Entity * entity, std::string fileName)
 
 void EntityHandler::BindLight(Entity * entity, float lightColour[3], float lightRange)
 {
-	lightJobs.push_back(LightJob(entity->lightID, lightColour, lightRange));
+	lightJobs.push_back(LightJob(entity->entityID, lightColour, lightRange));
 }
 
 void EntityHandler::BindPipeline(Entity * entity, std::string nameOfVS, std::string nameOfPS)

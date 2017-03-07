@@ -22,7 +22,6 @@ private:
 	INT8 transformID = -1;
 	INT8 meshID = -1;
 	INT8 textureID = -1;
-	INT8 lightID = -1;
 	INT8 pipelineID = -1;
 
 	bool render = false;
