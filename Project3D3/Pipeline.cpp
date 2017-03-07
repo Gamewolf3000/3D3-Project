@@ -12,17 +12,17 @@ void Pipeline::CreateRootSignature(PipelineData * data, RootSignatureData rootDa
 	CD3DX12_DESCRIPTOR_RANGE* descRanges = new CD3DX12_DESCRIPTOR_RANGE[rootData.type.size()];
 	for (int i = 0; i < rootData.type.size(); i++)
 	{
-		if (rootData.type[i] == ResourceType::CBV)
+		if (rootData.type[i].type == ResourceType::CBV)
 		{
-			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, rootData.type[i].shaderRegister);
 		}
-		else if (rootData.type[i] == ResourceType::SRV)
+		else if (rootData.type[i].type == ResourceType::SRV)
 		{
-			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, rootData.type[i].shaderRegister);
 		}
-		else if (rootData.type[i] == ResourceType::SAMPLER)
+		else if (rootData.type[i].type == ResourceType::SAMPLER)
 		{
-			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0);
+			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, rootData.type[i].shaderRegister);
 		}
 	}
 

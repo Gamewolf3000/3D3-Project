@@ -5,6 +5,7 @@
 #include <d3d12.h>
 #include <dxgi1_5.h> //Only used for initialization of the device and swap chain.
 #include <d3dcompiler.h>
+#include "JEXMath.h"
 
 #pragma comment (lib, "d3d12.lib")
 #pragma comment (lib, "DXGI.lib")
@@ -30,6 +31,19 @@ inline void SafeRelease(
 		(*ppInterfaceToRelease) = NULL;
 	}
 }
+
+struct ConstantBufferStruct
+{
+	Float4x4 worldMatrix;
+	float colours[6][4] = {};
+
+};
+
+struct ViewProjectionStruct
+{
+	Float4x4 projectionMatrix;
+	Float4x4 viewMatrix;
+};
 
 class D3D12Wrapper
 {
@@ -62,7 +76,10 @@ private:
 	MeshHandler* meshHandler;
 	ConstantBufferHandler *constantBufferHandler;
 	UINT8 constantBufferID;
-	float colours[6][4] = {};
+	UINT8 vpID;
+	float rotation = JEX_PI / 2;
+	ConstantBufferStruct *cbStruct;
+	ViewProjectionStruct *vpStruct;
 
 	//maybe
 	ID3D12DescriptorHeap* samplerHeap;

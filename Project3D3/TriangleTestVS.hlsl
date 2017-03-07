@@ -2,7 +2,14 @@
 
 cbuffer colourData : register(b0)
 {
+    float4x4 worldMatrix : WORLDMATRIX;
     float4 colourData[6] : COLOUR;
+}
+
+cbuffer viewProjectionMatrixes : register(b1)
+{
+    float4x4 projection;
+    float4x4 view;
 }
 
 struct vertexData
@@ -38,7 +45,7 @@ vertexData main(uint index : SV_VertexID)
             outPut.pos = float4(1.f, -1.0f, 0.0f, 1.0f);
             break;
     }
-
+    outPut.pos = mul(outPut.pos, mul(worldMatrix, mul(view, projection)));
 
 	return outPut;
 }
