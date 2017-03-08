@@ -17,6 +17,9 @@
 #include "CD3DX12Helper.h"
 #include "OBJLoader.h"
 
+#define VERTEXSIZE (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D) + sizeof(Float3D) + sizeof(Float3D))
+#define HEAP_SIZE (VERTEXSIZE * 10000)
+
 struct RenderData
 {
 	void* data = nullptr;
