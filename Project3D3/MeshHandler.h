@@ -36,7 +36,9 @@ class MeshHandler
 private:
 	ID3D12Device* device = nullptr;
 	OBJLoader* objLoader = nullptr;
-	ID3D12Resource* bufferResource = nullptr;
+
+	ID3D12Resource* vertexBufferUploader = nullptr;
+	ID3D12Resource* indexBufferUploader = nullptr;
 
 	std::vector<MeshData> meshes;
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> vBufferViews;
@@ -51,7 +53,8 @@ public:
 	INT8 LoadMesh(std::string fileName);
 	RenderData GetMeshAsRawData(INT8 meshID);
 
-	ID3D12Resource* GetBufferResource();
+	ID3D12Resource* GetVertexUploadBuffer();
+	ID3D12Resource* GetIndexUploadBuffer();
 
 };
 

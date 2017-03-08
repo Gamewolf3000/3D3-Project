@@ -27,9 +27,11 @@ vertexData main(VSIn input, uint index : SV_VertexID)
 {
 	vertexData outPut;
 	outPut.pos = float4(input.pos, 1.0f);
+	//outPut.pos.x -= index * 1.2f;
 	outPut.colour = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	outPut.pos = mul(outPut.pos, mul(worldMatrix, mul(view, projection)));
+	//outPut.pos = mul(outPut.pos, mul(worldMatrix, mul(view, projection)));
+	outPut.pos = mul(outPut.pos, mul(view, projection));
 
 	return outPut;
 }

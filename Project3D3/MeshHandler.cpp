@@ -20,7 +20,7 @@ RenderData MeshHandler::GetMeshAsRawData(INT8 meshID)
 	//}
 
 	MeshData temp = meshes[meshID];
-	int sizeOfVertex = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D));
+	int sizeOfVertex = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D) + sizeof(Float3D) + sizeof(Float3D));
 
 	RenderData returnData;
 
@@ -35,9 +35,14 @@ RenderData MeshHandler::GetMeshAsRawData(INT8 meshID)
 	return returnData;
 }
 
-ID3D12Resource * MeshHandler::GetBufferResource()
+ID3D12Resource * MeshHandler::GetVertexUploadBuffer()
 {
-	return bufferResource;
+	return vertexBufferUploader;
+}
+
+ID3D12Resource * MeshHandler::GetIndexUploadBuffer()
+{
+	return indexBufferUploader;
 }
 
 void MeshHandler::CreateUploadHeap()
@@ -49,7 +54,7 @@ void MeshHandler::CreateUploadHeap()
 
 	D3D12_RESOURCE_DESC rd = {};
 	rd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	rd.Width = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D)) * 100000;
+	rd.Width = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D) + sizeof(Float3D) + sizeof(Float3D)) * 10000;
 	rd.Height = 1;
 	rd.DepthOrArraySize = 1;
 	rd.MipLevels = 1;
@@ -64,9 +69,19 @@ void MeshHandler::CreateUploadHeap()
 		&rd,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&bufferResource));
+		IID_PPV_ARGS(&vertexBufferUploader));
 
-	bufferResource->SetName(L"vb heap");
+	vertexBufferUploader->SetName(L"vb heap");
+
+	rd.Width = sizeof(UINT) * 100000;
+
+	device->CreateCommittedResource(
+		&hp,
+		D3D12_HEAP_FLAG_NONE,
+		&rd,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&indexBufferUploader));
 }
 
 MeshHandler::MeshHandler(ID3D12Device* dev)
@@ -86,6 +101,9 @@ MeshHandler::~MeshHandler()
 		delete i.vertexBuffer;
 		delete i.indexBuffer;
 	}
+
+	vertexBufferUploader->Release();
+	indexBufferUploader->Release();
 }
 
 INT8 MeshHandler::LoadMesh(std::string fileName)
@@ -99,20 +117,21 @@ INT8 MeshHandler::LoadMesh(std::string fileName)
 		}
 	}
 
-	int sizeOfVertex = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D));
+	int sizeOfVertex = (sizeof(Float3D) + sizeof(Float2D) + sizeof(Float3D) + sizeof(Float3D) + sizeof(Float3D));
 
 	meshes.push_back(objLoader->LoadOBJFile(fileName));
+	meshes[meshes.size() - 1].identifier = fileName;
 
 	// Create view here
 	D3D12_VERTEX_BUFFER_VIEW vBufferView;
-	vBufferView.BufferLocation = bufferResource->GetGPUVirtualAddress();
+	vBufferView.BufferLocation = vertexBufferUploader->GetGPUVirtualAddress();
 	vBufferView.SizeInBytes = meshes[meshes.size() - 1].nrOfIndices * sizeOfVertex;
 	vBufferView.StrideInBytes = sizeOfVertex;
 
 	vBufferViews.push_back(vBufferView);
 
 	D3D12_INDEX_BUFFER_VIEW iBufferView;
-	iBufferView.BufferLocation = bufferResource->GetGPUVirtualAddress();
+	iBufferView.BufferLocation = indexBufferUploader->GetGPUVirtualAddress();
 	iBufferView.SizeInBytes = sizeof(UINT) * meshes[meshes.size() - 1].nrOfIndices;
 	iBufferView.Format = DXGI_FORMAT_R32_UINT;
 

@@ -72,15 +72,23 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	tempLayout.arraySize = 1;
 	tempLayout.dataType = FLOAT32_3;
 	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "TANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "BITANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
 
-	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "TriangleTestPS.hlsl", layoutData2);
+	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "MeshTestPS.hlsl", layoutData2);
 
 
 	meshHandler = new MeshHandler(device);
-	meshHandler->LoadMesh("sphere.obj");
+	//meshHandler->LoadMesh("sphere.obj");
 
 
-	std::cout << "I think it worked to create the Wrapper. We don't check that." << std::endl;
+	std::cout << "We think it worked to create the Wrapper. We don't check that." << std::endl;
 }
 
 D3D12Wrapper::~D3D12Wrapper()
@@ -113,10 +121,12 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 	ClearBuffer();
 
-	pipelineHandler->SetPipelineState(testPipelineID, commandList);
+	pipelineHandler->SetPipelineState(meshPipelineID, commandList);
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
 
+	constantBufferHandler->CreateConstantBuffer(100, vpStruct, sizeof(ViewProjectionStruct), ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
+	constantBufferHandler->BindBuffer(100, 0);
 
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
@@ -131,9 +141,9 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
 		MatrixToFloat4x4(finalMatrix, (MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]))*translation);
 
-		constantBufferHandler->UpdateBuffer(transformJobs.entityID, &finalMatrix);
+		//constantBufferHandler->UpdateBuffer(transformJobs.entityID, &finalMatrix);
 
-		constantBufferHandler->BindBuffer(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+		//constantBufferHandler->BindBuffer(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
 		//Handle the job
 		index++;
 	}
@@ -161,7 +171,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	}
 
 	D3D12_RANGE range = { 0, 0 };
-	ID3D12Resource* upload = meshHandler->GetBufferResource();
+	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
+	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
 
 	for (int i = 0; i < entities.size(); i++)
 	{
@@ -169,11 +180,76 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		{
 			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
 
+			float testData[8 * 3 * 3];
+			testData[0] = 0.0f;
+			testData[1] = 0.5f;
+			testData[2] = 0.0f;
+
+			testData[8] = 0.5f;
+			testData[9] = -0.5f;
+			testData[10] = 0.0f;
+
+			testData[16] = -0.5f;
+			testData[17] = -0.5f;
+			testData[18] = 0.0f;
+
+
+
+			testData[24] = 1.25f;
+			testData[25] = 0.5f;
+			testData[26] = 0.0f;
+
+			testData[32] = 1.75f;
+			testData[33] = -0.5f;
+			testData[34] = 0.0f;
+
+			testData[40] = 0.75f;
+			testData[41] = -0.5f;
+			testData[42] = 0.0f;
+
+
+
+			testData[48] = 2.5f;
+			testData[49] = 0.5f;
+			testData[50] = 0.0f;
+
+			testData[56] = 3.0f;
+			testData[57] = -0.5f;
+			testData[58] = 0.0f;
+
+			testData[64] = 2.0f;
+			testData[65] = -0.5f;
+			testData[66] = 0.0f;
+
 			void* bufferData = rData.data;
+			//void* bufferData = testData;
 			void* dataBegin;
-			upload->Map(0, &range, &dataBegin);
+			vUpload->Map(0, &range, &dataBegin);
 			memcpy(dataBegin, bufferData, rData.size);
-			upload->Unmap(0, nullptr);
+			//memcpy(dataBegin, bufferData, sizeof(float) * 3 * 8 * 3);
+			vUpload->Unmap(0, nullptr);
+
+			UINT testData2[9];
+
+			testData2[0] = 0;
+			testData2[1] = 0;
+			testData2[2] = 0;
+			testData2[3] = 0;
+			testData2[4] = 0;
+			testData2[5] = 0;
+			testData2[6] = 0;
+			testData2[7] = 0;
+			testData2[8] = 0;
+
+			void* bufferData2 = rData.indexBuffer;
+			//void* bufferData2 = testData2;
+			void* dataBegin2;
+			iUpload->Map(0, &range, &dataBegin2);
+			//memcpy(dataBegin, bufferData, rData.size);
+			memcpy(dataBegin2, bufferData2, rData.nrOfIndices);
+			iUpload->Unmap(0, nullptr);
+
+
 
 			//D3D12_VERTEX_BUFFER_VIEW view;
 			//view.BufferLocation = bufferResource->GetGPUVirtualAddress();
@@ -190,7 +266,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandList);
-	commandList->DrawInstanced(6, 1, 0, 0);
+	//commandList->DrawInstanced(6, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,
 		renderTargets[frameIndex],
