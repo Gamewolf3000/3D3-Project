@@ -26,6 +26,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
 	Entity* testEnt = entityHandler.CreateEntity();
 	entityHandler.BindMesh(testEnt, "The_Mighty_Cube2.obj");
+	Entity* testEnt2 = entityHandler.CreateEntity();
+	entityHandler.BindMesh(testEnt2, "sphere.obj");
 
 	
 	/*Looping the shit out of it*/

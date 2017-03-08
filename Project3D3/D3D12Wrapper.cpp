@@ -171,95 +171,44 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	}
 
 	D3D12_RANGE range = { 0, 0 };
+	UINT bytesFilled = 0;
 	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
 	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
+	void* dataBegin;
 
 	for (int i = 0; i < entities.size(); i++)
 	{
 		if (entities[i]->render)
 		{
+
 			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
 
-			float testData[8 * 3 * 3];
-			testData[0] = 0.0f;
-			testData[1] = 0.5f;
-			testData[2] = 0.0f;
+			if (true)
+			{
 
-			testData[8] = 0.5f;
-			testData[9] = -0.5f;
-			testData[10] = 0.0f;
+			}
+			else
+			{
 
-			testData[16] = -0.5f;
-			testData[17] = -0.5f;
-			testData[18] = 0.0f;
-
-
-
-			testData[24] = 1.25f;
-			testData[25] = 0.5f;
-			testData[26] = 0.0f;
-
-			testData[32] = 1.75f;
-			testData[33] = -0.5f;
-			testData[34] = 0.0f;
-
-			testData[40] = 0.75f;
-			testData[41] = -0.5f;
-			testData[42] = 0.0f;
-
-
-
-			testData[48] = 2.5f;
-			testData[49] = 0.5f;
-			testData[50] = 0.0f;
-
-			testData[56] = 3.0f;
-			testData[57] = -0.5f;
-			testData[58] = 0.0f;
-
-			testData[64] = 2.0f;
-			testData[65] = -0.5f;
-			testData[66] = 0.0f;
+			}
 
 			void* bufferData = rData.data;
-			//void* bufferData = testData;
-			void* dataBegin;
 			vUpload->Map(0, &range, &dataBegin);
 			memcpy(dataBegin, bufferData, rData.size);
-			//memcpy(dataBegin, bufferData, sizeof(float) * 3 * 8 * 3);
 			vUpload->Unmap(0, nullptr);
 
-			UINT testData2[9];
-
-			testData2[0] = 0;
-			testData2[1] = 0;
-			testData2[2] = 0;
-			testData2[3] = 0;
-			testData2[4] = 0;
-			testData2[5] = 0;
-			testData2[6] = 0;
-			testData2[7] = 0;
-			testData2[8] = 0;
-
-			void* bufferData2 = rData.indexBuffer;
-			//void* bufferData2 = testData2;
-			void* dataBegin2;
-			iUpload->Map(0, &range, &dataBegin2);
-			//memcpy(dataBegin, bufferData, rData.size);
-			memcpy(dataBegin2, bufferData2, rData.nrOfIndices);
-			iUpload->Unmap(0, nullptr);
-
-
-
-			//D3D12_VERTEX_BUFFER_VIEW view;
-			//view.BufferLocation = bufferResource->GetGPUVirtualAddress();
-			//view.SizeInBytes = SIZE_OF_HEAP;
-			//view.StrideInBytes = 0;
-
 			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
-			commandList->IASetIndexBuffer(&rData.iBufferView);
 
-			commandList->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
+			//Index buffer is not fully working but not needed since my obj loader for some reason duplicates the data so that it doesn't need to be indexed
+			//void* bufferData2 = rData.indexBuffer;
+			//void* dataBegin2;
+			//iUpload->Map(0, &range, &dataBegin2);
+			//memcpy(dataBegin2, bufferData2, rData.nrOfIndices);
+			//iUpload->Unmap(0, nullptr);
+
+			//commandList->IASetIndexBuffer(&rData.iBufferView);
+
+			commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
 
 		}
 	}
