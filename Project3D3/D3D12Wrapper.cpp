@@ -184,19 +184,12 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
 
-			if (true)
-			{
-
-			}
-			else
-			{
-
-			}
-
 			void* bufferData = rData.data;
 			vUpload->Map(0, &range, &dataBegin);
-			memcpy(dataBegin, bufferData, rData.size);
+			memcpy((char*)dataBegin + bytesFilled, bufferData, rData.size);
 			vUpload->Unmap(0, nullptr);
+
+			rData.vBufferView.BufferLocation += bytesFilled;
 
 			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
 
@@ -211,6 +204,9 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
 			commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
+
+			bytesFilled += rData.nrOfIndices * VERTEXSIZE;
+
 			index++;
 		}
 	}
