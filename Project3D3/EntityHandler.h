@@ -27,6 +27,8 @@ private:
 	bool render = false;
 };
 
+class ConstantBufferHandler;
+
 class EntityHandler
 {
 	friend class D3D12Wrapper;
@@ -53,11 +55,13 @@ private:
 	std::vector<LightJob>& GetLightJobs();
 	std::vector<PipelineJob>& GetPipelineJobs();
 
+	//This makes Jochim Sad, but I can't be ARSED
+
 public:
 	EntityHandler();
 	~EntityHandler();
 
-	Entity* CreateEntity();
+	Entity* CreateEntity(ConstantBufferHandler *cbHandler);
 
 	void BindMesh(Entity* entity, std::string fileName);
 	void BindTexture(Entity* entity, std::string fileName);

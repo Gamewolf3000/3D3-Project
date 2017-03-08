@@ -72,7 +72,6 @@ private:
 
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
-	ConstantBufferHandler *constantBufferHandler;
 	LightHandler* lightHandler;
 	UINT8 constantBufferID;
 	UINT8 vpID;
@@ -129,6 +128,7 @@ public:
 
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
+	ConstantBufferHandler *constantBufferHandler;
 	
 
 

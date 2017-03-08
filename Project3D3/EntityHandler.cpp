@@ -1,13 +1,15 @@
 #include "EntityHandler.h"
-
-Entity * EntityHandler::CreateEntity()
+#include "ConstantBuffer.h"
+Entity * EntityHandler::CreateEntity(ConstantBufferHandler *cbHandler)
 {
 	entityVec.push_back(new Entity(entityVec.size()));
 
 	// Always create a transform job, there is no point in an entity without a transformation anyway
 	// and by doing it at this point we reduce the work needed to be done on the outside
-	transformJobs.push_back(entityVec[entityVec.size() - 1]->transformID);
+	transformJobs.push_back(entityVec[entityVec.size() - 1]->entityID);
+	float data[6] = { 0 };
 
+	cbHandler->CreateConstantBuffer(entityVec[entityVec.size() - 1]->entityID, data, sizeof(float)*6, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
 	return entityVec[entityVec.size() - 1];
 }
 

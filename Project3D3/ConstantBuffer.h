@@ -50,8 +50,8 @@ public:
 
 	void CreateHeap(ConstantBufferType bufferType);
 
-	void BindBuffer(UINT8 ID, UINT index);
-	void UpdateBuffer(UINT8 ID, void* newData);
+	void BindBuffer(UINT8 ID, ConstantBufferType bufferType, UINT index);
+	void UpdateBuffer(UINT8 ID, ConstantBufferType bufferType, void* newData);
 	void SetDescriptorHeap(ConstantBufferType bufferType, ID3D12GraphicsCommandList* cmdList);
 	void SetGraphicsRoot(ConstantBufferType bufferType, UINT index, UINT offset, ID3D12GraphicsCommandList* cmdList);
 
@@ -73,7 +73,7 @@ private:
 	std::map<ConstantBufferType, ID3D12DescriptorHeap*> constantBufferHeapMap;
 	std::map<ConstantBufferType, ID3D12Resource*> constantBufferResourceMap;
 	std::map<ConstantBufferType, void*> cpu_MappedPtrs;
-	std::map<INT8, ConstantBuffer*> bufferVector;
+	std::map<INT8, std::map<ConstantBufferType, ConstantBuffer*>> bufferVector;
 
 	UINT8 nrOfBuffers = 0;
 	UINT16 maximumNumberOfBuffersBoundAtOnce = 0;
