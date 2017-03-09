@@ -316,4 +316,9 @@
       <Filter>DIRECTXTK</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="smileCeption.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>
