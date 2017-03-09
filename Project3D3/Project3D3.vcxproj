@@ -278,6 +278,9 @@
     <None Include="DXTK12\SimpleMath.inl" />
     <None Include="DXTK12\TeapotData.inc" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="smileCeption.png" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
