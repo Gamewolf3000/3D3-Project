@@ -1,10 +1,12 @@
 #include "ConstantBuffer.h"
 
-void ConstantBufferHandler::CreateConstantBuffer(INT8 ID, void * data, size_t dataSize, ConstantBufferType bufferType)
+void ConstantBufferHandler::CreateConstantBuffer(INT8 ID, void * data, ConstantBufferType bufferType)
 {
 	ConstantBuffer* buffer = new ConstantBuffer;
+	size_t dataSize = constantBufferSizes[bufferType];
 	buffer->rawData = new char[dataSize];
 	memcpy(buffer->rawData, data, dataSize);
+	constantBufferSizes[bufferType];
 	buffer->dataSize = dataSize;
 	buffer->type = bufferType;
 
@@ -102,7 +104,13 @@ void ConstantBufferHandler::BindBuffer(UINT8 ID, ConstantBufferType bufferType, 
 
 void ConstantBufferHandler::UpdateBuffer(UINT8 ID, ConstantBufferType bufferType, void * newData)
 {
-	memcpy(bufferVector[ID][bufferType]->rawData, newData, bufferVector[ID][bufferType]->dataSize);
+	/*Time complexity for map.find might become a problem...*/
+	if (bufferVector.find(ID) == bufferVector.end())
+		CreateConstantBuffer(ID, newData, bufferType);
+	else if(bufferVector.find(ID)->second.find(bufferType) == bufferVector.find(ID)->second.end())
+		CreateConstantBuffer(ID, newData, bufferType);			
+	else
+		memcpy(bufferVector[ID][bufferType]->rawData, newData, bufferVector[ID][bufferType]->dataSize);
 }
 
 void ConstantBufferHandler::SetDescriptorHeap(ConstantBufferType bufferType, ID3D12GraphicsCommandList* cmdList)

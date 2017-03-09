@@ -9,7 +9,7 @@ Entity * EntityHandler::CreateEntity(ConstantBufferHandler *cbHandler)
 	transformJobs.push_back(entityVec[entityVec.size() - 1]->entityID);
 	float data[6] = { 0 };
 
-	cbHandler->CreateConstantBuffer(entityVec[entityVec.size() - 1]->entityID, data, sizeof(float)*6, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
+	//cbHandler->CreateConstantBuffer(entityVec[entityVec.size() - 1]->entityID, data, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
 	return entityVec[entityVec.size() - 1];
 }
 

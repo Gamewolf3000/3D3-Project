@@ -46,7 +46,7 @@ public:
 	};
 
 
-	void CreateConstantBuffer(INT8 ID, void* data, size_t dataSize, ConstantBufferType bufferType);
+	void CreateConstantBuffer(INT8 ID, void* data, ConstantBufferType bufferType);
 
 	void CreateHeap(ConstantBufferType bufferType);
 
