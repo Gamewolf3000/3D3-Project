@@ -130,25 +130,25 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	constantBufferHandler->UpdateBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
 	constantBufferHandler->BindBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
 
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
 
 	UINT index = 0;
+	static float rotation = 0.0f;
 	for (auto &transformJobs : handler->GetTransformJobs())
 	{
 		/*Get the constant buffer that contains the transform job -> Update the buffer and bind it*/
 		/*Fetch the data here*/
 		Float4x4 finalMatrix;
 
-		Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
-		MatrixToFloat4x4(finalMatrix, (MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]))*translation);
-
+		Matrix translation = MatrixTranslation(transformJobs.position[0]+index*5.0f, transformJobs.position[1], transformJobs.position[2]);
+		MatrixToFloat4x4(finalMatrix, MatrixTranspose((MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]+rotation))*translation));
+		
 		constantBufferHandler->UpdateBuffer(transformJobs.entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, &finalMatrix);
-
+	
 		//Handle the job
 		index++;
 	}
-	handler->GetTransformJobs().clear();
+	rotation += 0.0025f;
+	//handler->GetTransformJobs().clear();
 
 	for (auto &meshJobs : handler->GetMeshJobs())
 	{
@@ -203,7 +203,13 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			//commandList->IASetIndexBuffer(&rData.iBufferView);
 
-			constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+			//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
+			constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandList);
+
+			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
+			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandList);
 			commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
 
 			bytesFilled += rData.nrOfIndices * VERTEXSIZE;
@@ -212,8 +218,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		}
 	}
 
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandList);
 	//commandList->DrawInstanced(6, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,

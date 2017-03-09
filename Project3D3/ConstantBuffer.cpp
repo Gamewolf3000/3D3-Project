@@ -61,7 +61,7 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 	constanstBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	constanstBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-	constanstBufferDesc.Width = constantBufferSizes[bufferType] * maximumNumberOfBuffersBoundAtOnce;
+	constanstBufferDesc.Width = ((constantBufferSizes[bufferType] + 255) & ~255) * maximumNumberOfBuffersBoundAtOnce;
 
 	ID3D12Resource* resourcePtr;
 	hr = devicePtr->CreateCommittedResource(&constantHeapProperties,
@@ -77,13 +77,17 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 	}
 	resourcePtr->SetName(L"ConstantBuffer " + bufferType);
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC viewDesc = {};
-	
-	viewDesc.BufferLocation = resourcePtr->GetGPUVirtualAddress();
-	viewDesc.SizeInBytes = (constantBufferSizes[bufferType] + 255) & ~255;
-
-	devicePtr->CreateConstantBufferView(&viewDesc, heapPtr->GetCPUDescriptorHandleForHeapStart());
-
+	D3D12_CONSTANT_BUFFER_VIEW_DESC viewDesc[512] = {};
+		
+		auto CPUHandle = heapPtr->GetCPUDescriptorHandleForHeapStart();
+	for (int i = 0; i < maximumNumberOfBuffersBoundAtOnce; i++)
+	{
+		viewDesc[i].SizeInBytes = ((constantBufferSizes[bufferType] + 255) & ~255);
+		viewDesc[i].BufferLocation = resourcePtr->GetGPUVirtualAddress();
+		viewDesc[i].BufferLocation += i*((constantBufferSizes[bufferType] + 255) & ~255);
+		devicePtr->CreateConstantBufferView(&viewDesc[i], CPUHandle );
+		CPUHandle.ptr += devicePtr->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	}
 	constantBufferResourceMap[bufferType] = resourcePtr;
 	void* cpuPtr;
 	D3D12_RANGE range = { 0,0 };
@@ -97,7 +101,7 @@ void ConstantBufferHandler::BindBuffer(UINT8 ID, ConstantBufferType bufferType, 
 	/*No error checking yet!*/
 	ConstantBuffer* buffer = bufferVector[ID][bufferType];
 	char* pointerWithOffset = (char*)cpu_MappedPtrs.find(buffer->type)->second;
-	pointerWithOffset += index*constantBufferSizes[buffer->type];
+	pointerWithOffset += index*((constantBufferSizes[bufferType] + 255) & ~255);
 	memcpy(pointerWithOffset, buffer->rawData, buffer->dataSize);
 
 }
@@ -121,7 +125,7 @@ void ConstantBufferHandler::SetDescriptorHeap(ConstantBufferType bufferType, ID3
 void ConstantBufferHandler::SetGraphicsRoot(ConstantBufferType bufferType, UINT index, UINT offset, ID3D12GraphicsCommandList* cmdList)
 {
 	auto GPUHandle = constantBufferHeapMap[bufferType]->GetGPUDescriptorHandleForHeapStart();
-	GPUHandle.ptr + offset*constantBufferSizes[bufferType];
+	GPUHandle.ptr += offset;
 	cmdList->SetGraphicsRootDescriptorTable(index, GPUHandle);
 }
 
