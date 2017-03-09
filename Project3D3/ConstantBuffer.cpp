@@ -1,10 +1,12 @@
 #include "ConstantBuffer.h"
 
-void ConstantBufferHandler::CreateConstantBuffer(INT8 ID, void * data, size_t dataSize, ConstantBufferType bufferType)
+void ConstantBufferHandler::CreateConstantBuffer(INT8 ID, void * data, ConstantBufferType bufferType)
 {
 	ConstantBuffer* buffer = new ConstantBuffer;
+	size_t dataSize = constantBufferSizes[bufferType];
 	buffer->rawData = new char[dataSize];
 	memcpy(buffer->rawData, data, dataSize);
+	constantBufferSizes[bufferType];
 	buffer->dataSize = dataSize;
 	buffer->type = bufferType;
 
@@ -14,7 +16,7 @@ void ConstantBufferHandler::CreateConstantBuffer(INT8 ID, void * data, size_t da
 		CreateHeap(bufferType);
 	}
 
-	bufferVector[ID] = (buffer);
+	bufferVector[ID][bufferType] = (buffer);
 
 }
 
@@ -90,19 +92,25 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 
 }
 
-void ConstantBufferHandler::BindBuffer(UINT8 ID, UINT index)
+void ConstantBufferHandler::BindBuffer(UINT8 ID, ConstantBufferType bufferType, UINT index)
 {
 	/*No error checking yet!*/
-	ConstantBuffer* buffer = bufferVector[ID];
+	ConstantBuffer* buffer = bufferVector[ID][bufferType];
 	char* pointerWithOffset = (char*)cpu_MappedPtrs.find(buffer->type)->second;
 	pointerWithOffset += index*constantBufferSizes[buffer->type];
 	memcpy(pointerWithOffset, buffer->rawData, buffer->dataSize);
 
 }
 
-void ConstantBufferHandler::UpdateBuffer(UINT8 ID, void * newData)
+void ConstantBufferHandler::UpdateBuffer(UINT8 ID, ConstantBufferType bufferType, void * newData)
 {
-	memcpy(bufferVector[ID]->rawData, newData, bufferVector[ID]->dataSize);
+	/*Time complexity for map.find might become a problem...*/
+	if (bufferVector.find(ID) == bufferVector.end())
+		CreateConstantBuffer(ID, newData, bufferType);
+	else if(bufferVector.find(ID)->second.find(bufferType) == bufferVector.find(ID)->second.end())
+		CreateConstantBuffer(ID, newData, bufferType);			
+	else
+		memcpy(bufferVector[ID][bufferType]->rawData, newData, bufferVector[ID][bufferType]->dataSize);
 }
 
 void ConstantBufferHandler::SetDescriptorHeap(ConstantBufferType bufferType, ID3D12GraphicsCommandList* cmdList)
@@ -138,7 +146,10 @@ ConstantBufferHandler::~ConstantBufferHandler()
 		heap.second->Release();
 	for (auto &buffer : bufferVector)
 	{
-		delete buffer.second->rawData;
-		delete buffer.second;
+		for (auto &innerBuffer : buffer.second)
+		{
+			delete innerBuffer.second->rawData;
+			delete innerBuffer.second;
+		}
 	}
 }

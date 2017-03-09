@@ -27,6 +27,8 @@ private:
 	bool render = false;
 };
 
+class ConstantBufferHandler;
+
 class EntityHandler
 {
 	friend class D3D12Wrapper;
@@ -52,6 +54,8 @@ private:
 	std::vector<TextureJob>& GetTextureJobs();
 	std::vector<LightJob>& GetLightJobs();
 	std::vector<PipelineJob>& GetPipelineJobs();
+
+	//This makes Jochim Sad, but I can't be ARSED
 
 public:
 	EntityHandler();

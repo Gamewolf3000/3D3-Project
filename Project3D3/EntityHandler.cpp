@@ -1,13 +1,15 @@
 #include "EntityHandler.h"
-
+#include "ConstantBuffer.h"
 Entity * EntityHandler::CreateEntity()
 {
 	entityVec.push_back(new Entity(entityVec.size()));
 
 	// Always create a transform job, there is no point in an entity without a transformation anyway
 	// and by doing it at this point we reduce the work needed to be done on the outside
-	transformJobs.push_back(entityVec[entityVec.size() - 1]->transformID);
+	transformJobs.push_back(entityVec[entityVec.size() - 1]->entityID);
+	float data[6] = { 0 };
 
+	
 	return entityVec[entityVec.size() - 1];
 }
 
