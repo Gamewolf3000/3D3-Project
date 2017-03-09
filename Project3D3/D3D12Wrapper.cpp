@@ -126,7 +126,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	for (auto &textureJobs : handler->GetTextureJobs())
 	{
 		//Handle the job
-		//entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
+		entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
 
 		commandList->Close();
 		ID3D12CommandList* listsToExecute[] = { commandList };
