@@ -24,9 +24,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	D3D12Wrapper graphics(hInstance, nCmdShow, 1280, 720);
 	EntityHandler entityHandler;
 
-	Entity* testEnt = entityHandler.CreateEntity(graphics.constantBufferHandler);
+	Entity* testEnt = entityHandler.CreateEntity();
 	entityHandler.BindMesh(testEnt, "The_Mighty_Cube2.obj");
-	Entity* testEnt2 = entityHandler.CreateEntity(graphics.constantBufferHandler);
+	Entity* testEnt2 = entityHandler.CreateEntity();
 	entityHandler.BindMesh(testEnt2, "sphere.obj");
 	entityHandler.BindTexture(testEnt, "smileCeption.png");
 	

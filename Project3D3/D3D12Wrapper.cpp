@@ -102,6 +102,12 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	meshHandler = new MeshHandler(device);
 	textureHandler = new TextureHandler(device);
 
+	D3D12_DESCRIPTOR_HEAP_DESC textureDesc = {};
+	textureDesc.NumDescriptors = 1;
+	textureDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	textureDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+	device->CreateDescriptorHeap(&textureDesc, IID_PPV_ARGS(&textureHeap));
 
 	std::cout << "We think it worked to create the Wrapper. We don't check that." << std::endl;
 }
@@ -126,7 +132,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	for (auto &textureJobs : handler->GetTextureJobs())
 	{
 		//Handle the job
-		//entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
+		entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
 
 		commandList->Close();
 		ID3D12CommandList* listsToExecute[] = { commandList };
@@ -243,8 +249,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHeap->GetGPUDescriptorHandleForHeapStart());
 				//texHandle.Offset()
 	
-				commandList->SetDescriptorHeaps(4, &textureHeap);
-				commandList->SetGraphicsRootDescriptorTable(4, texHandle);
+				commandList->SetDescriptorHeaps(1, &textureHeap);
+				commandList->SetGraphicsRootDescriptorTable(3, texHandle);
 			}
 
 
