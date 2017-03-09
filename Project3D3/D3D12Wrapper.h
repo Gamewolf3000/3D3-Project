@@ -16,6 +16,7 @@
 #include "EntityHandler.h"
 #include "ConstantBuffer.h"
 #include "MeshHandler.h"
+#include "TextureHandler.h"
 #include "LightHandler.h"
 
 #define NUM_SWAP_BUFFERS 2
@@ -72,6 +73,7 @@ private:
 
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
+	TextureHandler* textureHandler;
 	LightHandler* lightHandler;
 	UINT8 constantBufferID;
 	UINT8 vpID;

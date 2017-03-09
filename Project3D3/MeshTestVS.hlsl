@@ -19,6 +19,7 @@ cbuffer viewProjectionMatrixes : register(b1)
 struct vertexData
 {
 	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORDS;
 	float4 colour : COLOUR;
 };
 

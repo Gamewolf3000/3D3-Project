@@ -61,6 +61,18 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	rootData2.type.push_back(CBV2);
 	rootData2.visibility.push_back(PIXEL);
 
+	ResourceDescription SRV;
+	SRV.shaderRegister = 0;
+	SRV.type = ResourceType::SRV;
+	rootData2.type.push_back(SRV);
+	rootData2.visibility.push_back(PIXEL);
+
+	ResourceDescription SAMP;
+	SAMP.shaderRegister = 0;
+	SAMP.type = ResourceType::SAMPLER;
+	rootData2.type.push_back(SAMP);
+	rootData2.visibility.push_back(PIXEL);
+
 	std::vector<InputLayoutData> layoutData2;
 	InputLayoutData tempLayout;
 	tempLayout.inputName = "POSITION";
@@ -88,7 +100,7 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 
 	meshHandler = new MeshHandler(device);
-	//meshHandler->LoadMesh("sphere.obj");
+	textureHandler = new TextureHandler(device);
 
 
 	std::cout << "We think it worked to create the Wrapper. We don't check that." << std::endl;
@@ -100,6 +112,7 @@ D3D12Wrapper::~D3D12Wrapper()
 
 	delete pipelineHandler;
 	delete meshHandler;
+	delete textureHandler;
 	delete constantBufferHandler;
 }
 
@@ -110,6 +123,23 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
 
+	for (auto &textureJobs : handler->GetTextureJobs())
+	{
+		//Handle the job
+		//entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
+
+		commandList->Close();
+		ID3D12CommandList* listsToExecute[] = { commandList };
+		commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+
+		WaitForGPU();
+
+		commandAllocator->Reset();
+		HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+		WaitForGPU();
+
+	}
+	handler->GetTextureJobs().clear();
 
 	//Set necessary states.
 	commandList->RSSetViewports(1, &vp);
@@ -157,11 +187,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	}
 	handler->GetMeshJobs().clear();
 
-	for (auto &textureJobs : handler->GetTextureJobs())
-	{
-		//Handle the job
-	}
-
 	for (auto &lightJobs : handler->GetLightJobs())
 	{
 		//HANDLE IT
@@ -185,6 +210,14 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
 
+			if (bytesFilled + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
+			{
+				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
+				// but for now just a breakpoint, thats an easy solution
+				int a = 0;
+				a++;
+			}
+
 			void* bufferData = rData.data;
 			vUpload->Map(0, &range, &dataBegin);
 			memcpy((char*)dataBegin + bytesFilled, bufferData, rData.size);
@@ -194,14 +227,25 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
 
-			//Index buffer is not fully working but not needed since my obj loader for some reason duplicates the data so that it doesn't need to be indexed
+			//Should work, but is unnecessary
+
 			//void* bufferData2 = rData.indexBuffer;
 			//void* dataBegin2;
 			//iUpload->Map(0, &range, &dataBegin2);
-			//memcpy(dataBegin2, bufferData2, rData.nrOfIndices);
+			//memcpy(dataBegin2, bufferData2, rData.nrOfIndices * sizeof(UINT));
 			//iUpload->Unmap(0, nullptr);
 
 			//commandList->IASetIndexBuffer(&rData.iBufferView);
+
+
+			if (entities[i]->textureID != -1)
+			{
+				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHeap->GetGPUDescriptorHandleForHeapStart());
+				//texHandle.Offset()
+
+				commandList->SetDescriptorHeaps(4, &textureHeap);
+				commandList->SetGraphicsRootDescriptorTable(4, texHandle);
+			}
 
 			//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
 			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);

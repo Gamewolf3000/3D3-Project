@@ -148,6 +148,39 @@
   <ItemGroup>
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="D3D12Wrapper.cpp" />
+    <ClCompile Include="DXTK12\AlphaTestEffect.cpp" />
+    <ClCompile Include="DXTK12\BasicEffect.cpp" />
+    <ClCompile Include="DXTK12\BinaryReader.cpp" />
+    <ClCompile Include="DXTK12\CommonStates.cpp" />
+    <ClCompile Include="DXTK12\DDSTextureLoader.cpp" />
+    <ClCompile Include="DXTK12\DescriptorHeap.cpp" />
+    <ClCompile Include="DXTK12\DirectXHelpers.cpp" />
+    <ClCompile Include="DXTK12\DualTextureEffect.cpp" />
+    <ClCompile Include="DXTK12\EffectCommon.cpp" />
+    <ClCompile Include="DXTK12\EffectFactory.cpp" />
+    <ClCompile Include="DXTK12\EffectPipelineStateDescription.cpp" />
+    <ClCompile Include="DXTK12\EffectTextureFactory.cpp" />
+    <ClCompile Include="DXTK12\EnvironmentMapEffect.cpp" />
+    <ClCompile Include="DXTK12\GeometricPrimitive.cpp" />
+    <ClCompile Include="DXTK12\Geometry.cpp" />
+    <ClCompile Include="DXTK12\GraphicsMemory.cpp" />
+    <ClCompile Include="DXTK12\Keyboard.cpp" />
+    <ClCompile Include="DXTK12\LinearAllocator.cpp" />
+    <ClCompile Include="DXTK12\Model.cpp" />
+    <ClCompile Include="DXTK12\ModelLoadSDKMESH.cpp" />
+    <ClCompile Include="DXTK12\ModelLoadVBO.cpp" />
+    <ClCompile Include="DXTK12\Mouse.cpp" />
+    <ClCompile Include="DXTK12\NormalMapEffect.cpp" />
+    <ClCompile Include="DXTK12\pch.cpp" />
+    <ClCompile Include="DXTK12\PrimitiveBatch.cpp" />
+    <ClCompile Include="DXTK12\ResourceUploadBatch.cpp" />
+    <ClCompile Include="DXTK12\ScreenGrab.cpp" />
+    <ClCompile Include="DXTK12\SimpleMath.cpp" />
+    <ClCompile Include="DXTK12\SkinnedEffect.cpp" />
+    <ClCompile Include="DXTK12\SpriteBatch.cpp" />
+    <ClCompile Include="DXTK12\SpriteFont.cpp" />
+    <ClCompile Include="DXTK12\VertexTypes.cpp" />
+    <ClCompile Include="DXTK12\WICTextureLoader.cpp" />
     <ClCompile Include="EntityHandler.cpp" />
     <ClCompile Include="JEXMath.cpp" />
     <ClCompile Include="LightHandler.cpp" />
@@ -155,11 +188,48 @@
     <ClCompile Include="MeshHandler.cpp" />
     <ClCompile Include="OBJLoader.cpp" />
     <ClCompile Include="Pipeline.cpp" />
+    <ClCompile Include="TextureHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CD3DX12Helper.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="D3D12Wrapper.h" />
+    <ClInclude Include="DXTK12\AlignedNew.h" />
+    <ClInclude Include="DXTK12\Audio.h" />
+    <ClInclude Include="DXTK12\Bezier.h" />
+    <ClInclude Include="DXTK12\BinaryReader.h" />
+    <ClInclude Include="DXTK12\CommonStates.h" />
+    <ClInclude Include="DXTK12\d3dx12.h" />
+    <ClInclude Include="DXTK12\dds.h" />
+    <ClInclude Include="DXTK12\DDSTextureLoader.h" />
+    <ClInclude Include="DXTK12\DemandCreate.h" />
+    <ClInclude Include="DXTK12\DescriptorHeap.h" />
+    <ClInclude Include="DXTK12\DirectXHelpers.h" />
+    <ClInclude Include="DXTK12\EffectCommon.h" />
+    <ClInclude Include="DXTK12\EffectPipelineStateDescription.h" />
+    <ClInclude Include="DXTK12\Effects.h" />
+    <ClInclude Include="DXTK12\GeometricPrimitive.h" />
+    <ClInclude Include="DXTK12\Geometry.h" />
+    <ClInclude Include="DXTK12\GraphicsMemory.h" />
+    <ClInclude Include="DXTK12\Keyboard.h" />
+    <ClInclude Include="DXTK12\LinearAllocator.h" />
+    <ClInclude Include="DXTK12\LoaderHelpers.h" />
+    <ClInclude Include="DXTK12\Model.h" />
+    <ClInclude Include="DXTK12\Mouse.h" />
+    <ClInclude Include="DXTK12\pch.h" />
+    <ClInclude Include="DXTK12\PlatformHelpers.h" />
+    <ClInclude Include="DXTK12\PrimitiveBatch.h" />
+    <ClInclude Include="DXTK12\RenderTargetState.h" />
+    <ClInclude Include="DXTK12\ResourceUploadBatch.h" />
+    <ClInclude Include="DXTK12\ScreenGrab.h" />
+    <ClInclude Include="DXTK12\SDKMesh.h" />
+    <ClInclude Include="DXTK12\SharedResourcePool.h" />
+    <ClInclude Include="DXTK12\SimpleMath.h" />
+    <ClInclude Include="DXTK12\SpriteBatch.h" />
+    <ClInclude Include="DXTK12\SpriteFont.h" />
+    <ClInclude Include="DXTK12\vbo.h" />
+    <ClInclude Include="DXTK12\VertexTypes.h" />
+    <ClInclude Include="DXTK12\WICTextureLoader.h" />
     <ClInclude Include="EntityHandler.h" />
     <ClInclude Include="EntityJobs.h" />
     <ClInclude Include="JEXMath.h" />
@@ -168,6 +238,7 @@
     <ClInclude Include="OBJLoader.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="ShaderResourceView.h" />
+    <ClInclude Include="TextureHandler.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="MeshTestVS.hlsl">
@@ -202,6 +273,10 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DXTK12\SimpleMath.inl" />
+    <None Include="DXTK12\TeapotData.inc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
