@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="DIRECTXTK">
+      <UniqueIdentifier>{9fb954ac-8448-409c-ad3a-69e7533434cc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -41,6 +44,108 @@
     </ClCompile>
     <ClCompile Include="LightHandler.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\AlphaTestEffect.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\BasicEffect.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\BinaryReader.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\CommonStates.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\DDSTextureLoader.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\DescriptorHeap.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\DirectXHelpers.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\DualTextureEffect.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\EffectCommon.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\EffectFactory.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\EffectPipelineStateDescription.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\EffectTextureFactory.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\EnvironmentMapEffect.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\GeometricPrimitive.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\Geometry.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\GraphicsMemory.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\Keyboard.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\LinearAllocator.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\Model.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\ModelLoadSDKMESH.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\ModelLoadVBO.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\Mouse.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\NormalMapEffect.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\pch.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\PrimitiveBatch.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\ResourceUploadBatch.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\ScreenGrab.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\SimpleMath.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\SkinnedEffect.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\SpriteBatch.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\SpriteFont.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\VertexTypes.cpp">
+      <Filter>DIRECTXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="DXTK12\WICTextureLoader.cpp">
+      <Filter>DIRECTXTK</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -77,6 +182,117 @@
     <ClInclude Include="LightHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TextureHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\WICTextureLoader.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\AlignedNew.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\Audio.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\Bezier.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\BinaryReader.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\CommonStates.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\d3dx12.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\dds.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\DDSTextureLoader.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\DemandCreate.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\DescriptorHeap.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\DirectXHelpers.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\EffectCommon.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\EffectPipelineStateDescription.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\Effects.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\GeometricPrimitive.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\Geometry.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\GraphicsMemory.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\Keyboard.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\LinearAllocator.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\LoaderHelpers.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\Model.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\Mouse.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\pch.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\PlatformHelpers.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\PrimitiveBatch.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\RenderTargetState.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\ResourceUploadBatch.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\ScreenGrab.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\SDKMesh.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\SharedResourcePool.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\SimpleMath.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\SpriteBatch.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\SpriteFont.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\vbo.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="DXTK12\VertexTypes.h">
+      <Filter>DIRECTXTK</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="TriangleTestVS.hlsl">
@@ -91,5 +307,13 @@
     <FxCompile Include="MeshTestPS.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DXTK12\SimpleMath.inl">
+      <Filter>DIRECTXTK</Filter>
+    </None>
+    <None Include="DXTK12\TeapotData.inc">
+      <Filter>DIRECTXTK</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -28,6 +28,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	entityHandler.BindMesh(testEnt2, "sphere.obj");
 	Entity* testEnt = entityHandler.CreateEntity();
 	entityHandler.BindMesh(testEnt, "The_Mighty_Cube2.obj");
+	entityHandler.BindTexture(testEnt, "smileCeption.png");
 	
 
 	

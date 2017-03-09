@@ -48,7 +48,6 @@ void Pipeline::CreateRootSignature(PipelineData * data, RootSignatureData rootDa
 		D3D_ROOT_SIGNATURE_VERSION_1,
 		&sBlob,
 		nullptr);
-	auto a = sBlob->GetBufferSize();
 
 	hr = device->CreateRootSignature(
 		0,
@@ -107,7 +106,6 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 	}
 
 	D3D12_INPUT_ELEMENT_DESC* inputElementDesc = new D3D12_INPUT_ELEMENT_DESC[totalLayoutSize];
-	D3D12_INPUT_ELEMENT_DESC uglyTest;
 	int nrOfSet = 0;
 
 	for (int i = 0; i < layoutData.size(); i++)
@@ -133,19 +131,6 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 		
 		// Set all the things in here
 	}
-
-	////// Input Layout //////
-	//D3D12_INPUT_ELEMENT_DESC inputElementDesc[] = {
-	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "POSITION", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16 ,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "POSITION", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32 ,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "NORMAL"	, 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 48 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "NORMAL"	, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 64 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "NORMAL"	, 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 80 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "UV" , 0, DXGI_FORMAT_R32G32_FLOAT, 0, 96 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "UV" , 1, DXGI_FORMAT_R32G32_FLOAT, 0, 104 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	//	{ "UV" , 2, DXGI_FORMAT_R32G32_FLOAT, 0, 112 , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	//};
 
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
 	inputLayoutDesc.pInputElementDescs = inputElementDesc;
