@@ -1,6 +1,6 @@
 #include "EntityHandler.h"
 #include "ConstantBuffer.h"
-Entity * EntityHandler::CreateEntity(ConstantBufferHandler *cbHandler)
+Entity * EntityHandler::CreateEntity()
 {
 	entityVec.push_back(new Entity(entityVec.size()));
 
@@ -9,7 +9,7 @@ Entity * EntityHandler::CreateEntity(ConstantBufferHandler *cbHandler)
 	transformJobs.push_back(entityVec[entityVec.size() - 1]->entityID);
 	float data[6] = { 0 };
 
-	//cbHandler->CreateConstantBuffer(entityVec[entityVec.size() - 1]->entityID, data, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA);
+	
 	return entityVec[entityVec.size() - 1];
 }
 

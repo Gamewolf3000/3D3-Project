@@ -61,7 +61,7 @@ public:
 	EntityHandler();
 	~EntityHandler();
 
-	Entity* CreateEntity(ConstantBufferHandler *cbHandler);
+	Entity* CreateEntity();
 
 	void BindMesh(Entity* entity, std::string fileName);
 	void BindTexture(Entity* entity, std::string fileName);
