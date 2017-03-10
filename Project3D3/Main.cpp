@@ -33,6 +33,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	entityHandler.BindMesh(testEnt2, "sphere.obj");
 	entityHandler.BindTexture(testEnt, "smileCeption.png");
 	entityHandler.BindTexture(testEnt2, "StefanMega.jpg");
+
+	float pos[3] = { 1000.0f, 0.0f, 0.0f };
+	float rot[3] = { 0.0f, 0.0f, 0.0f };
+
+	entityHandler.SetTransform(testEnt, pos, rot);
 	
 
 	
