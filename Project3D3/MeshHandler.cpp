@@ -31,6 +31,10 @@ ID3D12Resource * MeshHandler::GetIndexUploadBuffer()
 
 void MeshHandler::CreateUploadHeap()
 {
+	//Note: using upload heaps to transfer static data like vert buffers is not 
+	//recommended. Every time the GPU needs it, the upload heap will be marshalled 
+	//over. Please read up on Default Heap usage. An upload heap is used here for 
+	//code simplicity
 	D3D12_HEAP_PROPERTIES hp = {};
 	hp.Type = D3D12_HEAP_TYPE_UPLOAD;
 	hp.CreationNodeMask = 1;

@@ -9,6 +9,9 @@
 #include <fcntl.h>
 #include <iostream>
 
+Float3D cameraPos(0, 0, -10);
+float cameraRot = 0;
+void Update(D3D12Wrapper& graphics);
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
@@ -29,6 +32,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	Entity* testEnt2 = entityHandler.CreateEntity();
 	entityHandler.BindMesh(testEnt2, "sphere.obj");
 	entityHandler.BindTexture(testEnt, "smileCeption.png");
+	entityHandler.BindTexture(testEnt2, "StefanMega.jpg");
 	
 
 	
@@ -42,10 +46,43 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 		else
 		{
+			Update(graphics);
 			graphics.Render(&entityHandler);
 		}
 	}
 
 	FreeConsole();
 
+}
+
+void Update(D3D12Wrapper& graphics)
+{
+	if ((GetKeyState('A') & 0x80))
+	{
+		cameraPos.x -= 0.01f;
+	}
+	else if ((GetKeyState('D') & 0x80))
+	{
+		cameraPos.x += 0.01f;
+	}
+	
+	if ((GetKeyState('W') & 0x80))
+	{
+		cameraPos.z += 0.01f;
+	}
+	else if ((GetKeyState('S') & 0x80))
+	{
+		cameraPos.z -= 0.01f;
+	}
+
+	if ((GetKeyState('Q') & 0x80))
+	{
+		cameraRot -= 0.0015f;
+	}
+	else if ((GetKeyState('E') & 0x80))
+	{
+		cameraRot += 0.0015f;
+	}
+
+	graphics.MoveCamera(cameraPos, cameraRot);
 }

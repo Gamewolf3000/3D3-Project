@@ -12,7 +12,11 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	initialize(hInstance, nCmdShow);
 
 	pipelineHandler = new Pipeline(device);
+	CreatePipelines();
 	lightHandler = new LightHandler(512);
+	meshHandler = new MeshHandler(device);
+	textureHandler = new TextureHandler(device);
+
 	auto sizes = ConstantBufferHandler::ConstantBufferSizes();
 	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(ConstantBufferStruct);
 	sizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE = sizeof(ViewProjectionStruct);
@@ -26,88 +30,6 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
-
-
-	RootSignatureData rootData;
-	ResourceDescription CBV;
-	CBV.shaderRegister = 0;
-	CBV.type = ResourceType::CBV;
-	rootData.type.push_back(CBV);
-	rootData.visibility.push_back(VERTEX);
-	CBV.shaderRegister = 1;
-	rootData.type.push_back(CBV);
-	rootData.visibility.push_back(VERTEX);
-	CBV.shaderRegister = 0;
-	CBV.type = ResourceType::CBV;
-	rootData.type.push_back(CBV);
-	rootData.visibility.push_back(PIXEL);
-
-	std::vector<InputLayoutData> layoutData;
-
-	testPipelineID = pipelineHandler->CreatePipeline(rootData, "TriangleTestVS.hlsl", "TriangleTestPS.hlsl", layoutData);
-
-
-	RootSignatureData rootData2;
-	ResourceDescription CBV2;
-	CBV2.shaderRegister = 0;
-	CBV2.type = ResourceType::CBV;
-	rootData2.type.push_back(CBV2);
-	rootData2.visibility.push_back(VERTEX);
-	CBV2.shaderRegister = 1;
-	rootData2.type.push_back(CBV2);
-	rootData2.visibility.push_back(VERTEX);
-	CBV2.shaderRegister = 0;
-	CBV2.type = ResourceType::CBV;
-	rootData2.type.push_back(CBV2);
-	rootData2.visibility.push_back(PIXEL);
-
-	ResourceDescription SRV;
-	SRV.shaderRegister = 0;
-	SRV.type = ResourceType::SRV;
-	rootData2.type.push_back(SRV);
-	rootData2.visibility.push_back(PIXEL);
-
-	ResourceDescription SAMP;
-	SAMP.shaderRegister = 0;
-	SAMP.type = ResourceType::SAMPLER;
-	rootData2.type.push_back(SAMP);
-	rootData2.visibility.push_back(PIXEL);
-
-	std::vector<InputLayoutData> layoutData2;
-	InputLayoutData tempLayout;
-	tempLayout.inputName = "POSITION";
-	tempLayout.arraySize = 1;
-	tempLayout.dataType = FLOAT32_3;
-	layoutData2.push_back(tempLayout);
-	tempLayout.inputName = "TEXCOORDS";
-	tempLayout.arraySize = 1;
-	tempLayout.dataType = FLOAT32_2;
-	layoutData2.push_back(tempLayout);
-	tempLayout.inputName = "NORMAL";
-	tempLayout.arraySize = 1;
-	tempLayout.dataType = FLOAT32_3;
-	layoutData2.push_back(tempLayout);
-	tempLayout.inputName = "TANGENT";
-	tempLayout.arraySize = 1;
-	tempLayout.dataType = FLOAT32_3;
-	layoutData2.push_back(tempLayout);
-	tempLayout.inputName = "BITANGENT";
-	tempLayout.arraySize = 1;
-	tempLayout.dataType = FLOAT32_3;
-	layoutData2.push_back(tempLayout);
-
-	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "MeshTestPS.hlsl", layoutData2);
-
-
-	meshHandler = new MeshHandler(device);
-	textureHandler = new TextureHandler(device);
-
-	D3D12_DESCRIPTOR_HEAP_DESC textureDesc = {};
-	textureDesc.NumDescriptors = 1;
-	textureDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	textureDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-
-	device->CreateDescriptorHeap(&textureDesc, IID_PPV_ARGS(&textureHeap));
 
 	std::cout << "We think it worked to create the Wrapper. We don't check that." << std::endl;
 }
@@ -235,21 +157,28 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			//Should work, but is unnecessary
 
-			//void* bufferData2 = rData.indexBuffer;
-			//void* dataBegin2;
-			//iUpload->Map(0, &range, &dataBegin2);
-			//memcpy(dataBegin2, bufferData2, rData.nrOfIndices * sizeof(UINT));
-			//iUpload->Unmap(0, nullptr);
+			void* bufferData2 = rData.indexBuffer;
+			void* dataBegin2;
+			iUpload->Map(0, &range, &dataBegin2);
+			memcpy(dataBegin2, bufferData2, rData.nrOfIndices * sizeof(UINT));
+			iUpload->Unmap(0, nullptr);
 
-			//commandList->IASetIndexBuffer(&rData.iBufferView);
+			commandList->IASetIndexBuffer(&rData.iBufferView);
 
 
 			if (entities[i]->textureID != -1)
 			{
-				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHeap->GetGPUDescriptorHandleForHeapStart());
-				//texHandle.Offset()
+				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
+				texHandle.Offset(entities[i]->textureID, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 	
-				commandList->SetDescriptorHeaps(1, &textureHeap);
+				commandList->SetDescriptorHeaps(1, &textureHandler->GetTextureHeap());
+				commandList->SetGraphicsRootDescriptorTable(3, texHandle);
+			}
+			else
+			{
+				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
+
+				commandList->SetDescriptorHeaps(1, nullptr);
 				commandList->SetGraphicsRootDescriptorTable(3, texHandle);
 			}
 
@@ -257,7 +186,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
 			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandList);
 
-			commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
+			//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
+			commandList->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
 
 			bytesFilled += rData.nrOfIndices * VERTEXSIZE;
 
@@ -276,6 +206,18 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	commandList->Close();
 
 	Present();
+}
+
+void D3D12Wrapper::MoveCamera(Float3D position, float rotation)
+{
+	Vec lookDir = VecCreate(0, 0, 1, 0);
+	Vec positionVec = VecCreate(position.x, position.y, position.z, 1.0f);
+
+	Matrix rotMatrix = MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), rotation);
+
+	lookDir = VecMultMatrix3D(lookDir, rotMatrix);
+
+	MatrixToFloat4x4(vpStruct->viewMatrix, MatrixTranspose(MatrixViewLH(positionVec, VecAdd(lookDir, positionVec), VecCreate(0.0f, 1.0f, 0.0f, 0.0f))));
 }
 
 void D3D12Wrapper::InitializeWindow(HINSTANCE hInstance, int nCmdShow)
@@ -492,42 +434,6 @@ void D3D12Wrapper::CreateViewportAndScissorRect()
 	scissorRect.bottom = (long)windowHeight;
 }
 
-void D3D12Wrapper::CreateRenderHeap()
-{
-	//if (bufferResource)
-	//	bufferResource->Release();
-
-	////Note: using upload heaps to transfer static data like vert buffers is not 
-	////recommended. Every time the GPU needs it, the upload heap will be marshalled 
-	////over. Please read up on Default Heap usage. An upload heap is used here for 
-	////code simplicity and because there are very few vertices to actually transfer.
-	//D3D12_HEAP_PROPERTIES hp = {};
-	//hp.Type = D3D12_HEAP_TYPE_UPLOAD;
-	//hp.CreationNodeMask = 1;
-	//hp.VisibleNodeMask = 1;
-
-	//D3D12_RESOURCE_DESC rd = {};
-	//rd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	//rd.Width = NUM_OBJECTS_TO_RENDER_BATCH * 3 * 4;;
-	//rd.Height = 1;
-	//rd.DepthOrArraySize = 1;
-	//rd.MipLevels = 1;
-	//rd.SampleDesc.Count = 1;
-	//rd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-	////Creates both a resource and an implicit heap, such that the heap is big enough
-	////to contain the entire resource and the resource is mapped to the heap. 
-	//device->CreateCommittedResource(
-	//	&hp,
-	//	D3D12_HEAP_FLAG_NONE,
-	//	&rd,
-	//	D3D12_RESOURCE_STATE_GENERIC_READ,
-	//	nullptr,
-	//	IID_PPV_ARGS(&bufferResource));
-
-	//bufferResource->SetName(L"vb heap");
-}
-
 void D3D12Wrapper::CreateDepthStencil()
 {
 	HRESULT hr;
@@ -565,6 +471,80 @@ void D3D12Wrapper::CreateDepthStencil()
 	device->CreateDepthStencilView(depthstencil, nullptr, depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
 
 	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+}
+
+void D3D12Wrapper::CreatePipelines()
+{
+	RootSignatureData rootData;
+	ResourceDescription CBV;
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData.type.push_back(CBV);
+	rootData.visibility.push_back(VERTEX);
+	CBV.shaderRegister = 1;
+	rootData.type.push_back(CBV);
+	rootData.visibility.push_back(VERTEX);
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData.type.push_back(CBV);
+	rootData.visibility.push_back(PIXEL);
+
+	std::vector<InputLayoutData> layoutData;
+
+	testPipelineID = pipelineHandler->CreatePipeline(rootData, "TriangleTestVS.hlsl", "TriangleTestPS.hlsl", layoutData);
+
+
+	RootSignatureData rootData2;
+	ResourceDescription CBV2;
+	CBV2.shaderRegister = 0;
+	CBV2.type = ResourceType::CBV;
+	rootData2.type.push_back(CBV2);
+	rootData2.visibility.push_back(VERTEX);
+	CBV2.shaderRegister = 1;
+	rootData2.type.push_back(CBV2);
+	rootData2.visibility.push_back(VERTEX);
+	CBV2.shaderRegister = 0;
+	CBV2.type = ResourceType::CBV;
+	rootData2.type.push_back(CBV2);
+	rootData2.visibility.push_back(PIXEL);
+
+	ResourceDescription SRV;
+	SRV.shaderRegister = 0;
+	SRV.type = ResourceType::SRV;
+	rootData2.type.push_back(SRV);
+	rootData2.visibility.push_back(PIXEL);
+
+	ResourceDescription SAMP;
+	SAMP.shaderRegister = 0;
+	SAMP.type = ResourceType::SAMPLER;
+	rootData2.type.push_back(SAMP);
+	rootData2.visibility.push_back(PIXEL);
+
+	std::vector<InputLayoutData> layoutData2;
+	InputLayoutData tempLayout;
+	tempLayout.inputName = "POSITION";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "TEXCOORDS";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_2;
+	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "NORMAL";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "TANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
+	tempLayout.inputName = "BITANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData2.push_back(tempLayout);
+
+	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "MeshTestPS.hlsl", layoutData2);
+
 }
 
 void D3D12Wrapper::WaitForGPU()
@@ -612,7 +592,6 @@ int D3D12Wrapper::initialize(HINSTANCE hInstance, int nCmdShow)
 	CreateFenceAndEventHandle();			//4. Create Fence and Event handle
 	CreateRenderTargets();					//5. Create render targets for backbuffer
 	CreateViewportAndScissorRect();
-	CreateRenderHeap();
 	CreateDepthStencil();
 
 	commandList->Close();
@@ -662,9 +641,6 @@ int D3D12Wrapper::Shutdown()
 	{
 		SafeRelease(&renderTargets[i]);
 	}
-
-	SafeRelease(&bufferResource);
-	SafeRelease(&textureResource);
 
 	/*SafeRelease(&constantBufferResource);
 	SafeRelease(&CBDescriptorHeap);*/
