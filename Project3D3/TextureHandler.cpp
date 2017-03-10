@@ -6,7 +6,7 @@ TextureHandler::TextureHandler(ID3D12Device * dev)
 	device = dev;
 
 	D3D12_DESCRIPTOR_HEAP_DESC textureDesc = {};
-	textureDesc.NumDescriptors = 1;
+	textureDesc.NumDescriptors = 20; // maximum number of textures, bad things will probably happen if we have more
 	textureDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
@@ -95,7 +95,8 @@ INT8 TextureHandler::LoadTextureFromFile(std::string fileName, ID3D12GraphicsCom
 	texture->SetName(std::wstring(L"Texture " + convertedString).c_str());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(textureHeap->GetCPUDescriptorHandleForHeapStart());
-	
+	hDescriptor.Offset(textureResources.size(), device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)); // there is a limit to how many we can have set by the heap
+
 	device->CreateShaderResourceView(texture, &desc, hDescriptor);
 
 	TextureData data;
@@ -108,7 +109,10 @@ INT8 TextureHandler::LoadTextureFromFile(std::string fileName, ID3D12GraphicsCom
 
 	wicTemp->Release();
 
-	//commandList->Close();
-
 	return textureResources.size() - 1;
+}
+
+ID3D12DescriptorHeap *& TextureHandler::GetTextureHeap()
+{
+	return textureHeap;
 }

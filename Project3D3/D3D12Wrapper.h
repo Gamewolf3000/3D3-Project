@@ -82,15 +82,6 @@ private:
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
 
-	//maybe
-	ID3D12DescriptorHeap* samplerHeap;
-	ID3D12DescriptorHeap* textureHeap;
-	ID3D12Resource* bufferResource = nullptr;
-	ID3D12Resource* textureResource = nullptr;
-	ID3D12DescriptorHeap* CBDescriptorHeap;
-	ID3D12Resource* constantBufferResource;
-	void* constantBufferCPU_mappedPtr;
-
 	D3D12_VIEWPORT vp;
 	D3D12_RECT scissorRect;
 
@@ -106,9 +97,9 @@ private:
 	void CreateFenceAndEventHandle();
 	void CreateRenderTargets();
 	void CreateViewportAndScissorRect();
-	void CreateRenderHeap();
-	//void CreateConstantBufferHeap();
 	void CreateDepthStencil();
+
+	void CreatePipelines();
 
 	void WaitForGPU();
 
@@ -131,6 +122,8 @@ public:
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
 	ConstantBufferHandler *constantBufferHandler;
+
+	void MoveCamera(Float3D position, float rotation);
 	
 
 

@@ -40,6 +40,7 @@ public:
 
 
 	INT8 LoadTextureFromFile(std::string fileName, ID3D12GraphicsCommandList* commandList);
+	ID3D12DescriptorHeap*& GetTextureHeap();
 
 
 
