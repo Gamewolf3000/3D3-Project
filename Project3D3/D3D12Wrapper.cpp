@@ -126,7 +126,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	}
 
 	D3D12_RANGE range = { 0, 0 };
-	UINT bytesFilled = 0;
+	UINT vertexOffset = 0;
+	UINT indexOffset = 0;
 	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
 	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
 	void* dataBegin;
@@ -138,7 +139,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
 
-			if (bytesFilled + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
+			if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
 			{
 				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
 				// but for now just a breakpoint, thats an easy solution
@@ -148,10 +149,10 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 			void* bufferData = rData.data;
 			vUpload->Map(0, &range, &dataBegin);
-			memcpy((char*)dataBegin + bytesFilled, bufferData, rData.size);
+			memcpy((char*)dataBegin + vertexOffset, bufferData, rData.size);
 			vUpload->Unmap(0, nullptr);
 
-			rData.vBufferView.BufferLocation += bytesFilled;
+			rData.vBufferView.BufferLocation += vertexOffset;
 
 			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
 
@@ -160,8 +161,10 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 			void* bufferData2 = rData.indexBuffer;
 			void* dataBegin2;
 			iUpload->Map(0, &range, &dataBegin2);
-			memcpy(dataBegin2, bufferData2, rData.nrOfIndices * sizeof(UINT));
+			memcpy((char*)dataBegin2 + indexOffset, bufferData2, rData.nrOfIndices * sizeof(UINT));
 			iUpload->Unmap(0, nullptr);
+
+			rData.iBufferView.BufferLocation += indexOffset;
 
 			commandList->IASetIndexBuffer(&rData.iBufferView);
 
@@ -189,7 +192,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 			//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
 			commandList->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
 
-			bytesFilled += rData.nrOfIndices * VERTEXSIZE;
+			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
+			indexOffset += rData.nrOfIndices * sizeof(UINT);
 
 			index++;
 		}
