@@ -95,7 +95,7 @@ INT8 TextureHandler::LoadTextureFromFile(std::string fileName, ID3D12GraphicsCom
 	texture->SetName(std::wstring(L"Texture " + convertedString).c_str());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(textureHeap->GetCPUDescriptorHandleForHeapStart());
-
+	
 	device->CreateShaderResourceView(texture, &desc, hDescriptor);
 
 	TextureData data;
@@ -105,6 +105,8 @@ INT8 TextureHandler::LoadTextureFromFile(std::string fileName, ID3D12GraphicsCom
 	data.textureUploadHeap = upload;
 
 	textureResources.push_back(data);
+
+	wicTemp->Release();
 
 	//commandList->Close();
 

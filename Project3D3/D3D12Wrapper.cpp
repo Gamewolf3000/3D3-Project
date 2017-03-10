@@ -248,7 +248,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 			{
 				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHeap->GetGPUDescriptorHandleForHeapStart());
 				//texHandle.Offset()
-	
 				commandList->SetDescriptorHeaps(1, &textureHeap);
 				commandList->SetGraphicsRootDescriptorTable(3, texHandle);
 			}
@@ -659,8 +658,8 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&fence);
 
 	SafeRelease(&renderTargetsHeap);
-	/*SafeRelease(&samplerHeap);
-	SafeRelease(&textureHeap);*/
+	/*SafeRelease(&samplerHeap);*/
+	SafeRelease(&textureHeap);
 	for (int i = 0; i < NUM_SWAP_BUFFERS; i++)
 	{
 		SafeRelease(&renderTargets[i]);

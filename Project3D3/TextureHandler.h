@@ -38,6 +38,7 @@ public:
 	TextureHandler(ID3D12Device* dev);
 	~TextureHandler();
 
+
 	INT8 LoadTextureFromFile(std::string fileName, ID3D12GraphicsCommandList* commandList);
 
 
