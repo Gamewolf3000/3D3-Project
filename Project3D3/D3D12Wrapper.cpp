@@ -640,7 +640,7 @@ int D3D12Wrapper::Shutdown()
 
 	SafeRelease(&renderTargetsHeap);
 	/*SafeRelease(&samplerHeap);*/
-	SafeRelease(&textureHeap);
+	//SafeRelease(&textureHeap);
 	for (int i = 0; i < NUM_SWAP_BUFFERS; i++)
 	{
 		SafeRelease(&renderTargets[i]);
