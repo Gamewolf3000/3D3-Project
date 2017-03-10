@@ -97,7 +97,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		/*Fetch the data here*/
 		Float4x4 finalMatrix;
 
-		Matrix translation = MatrixTranslation(transformJobs.position[0]+index*5.0f, transformJobs.position[1], transformJobs.position[2]);
+		Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
 		MatrixToFloat4x4(finalMatrix, MatrixTranspose((MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]+rotation))*translation));
 		
 		constantBufferHandler->UpdateBuffer(transformJobs.entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, &finalMatrix);
