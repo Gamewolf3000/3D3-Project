@@ -88,8 +88,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	constantBufferHandler->UpdateBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
 	constantBufferHandler->BindBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
 
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
 
 	UINT index = 0;
 	for (auto &transformJobs : handler->GetTransformJobs())
@@ -185,6 +183,9 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 				commandList->SetGraphicsRootDescriptorTable(3, texHandle);
 			}
 
+			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
+			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, 0, commandList);
+			constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
 
 			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
 			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandList);
