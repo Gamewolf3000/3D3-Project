@@ -68,7 +68,7 @@ public:
 	void BindLight(Entity* entity, float lightColour[3], float lightRange);
 	void BindPipeline(Entity* entity, std::string nameOfVS, std::string nameOfPS);
 
-	void SetTransform(Entity* entity, float pos[3], float rot[3]); // This isn't really according to the entity component system but since it is a small project we do it anyways
+	void SetTransform(Entity* entity, float pos[3], float rot[3], float scale); // This isn't really according to the entity component system but since it is a small project we do it anyways
 	
 
 };

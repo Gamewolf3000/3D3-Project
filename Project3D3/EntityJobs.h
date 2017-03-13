@@ -20,6 +20,7 @@ public:
 	INT8 entityID = -1;
 	float position[3] = { 0.0f, 0.0f, 0.0f };
 	float rotation[3] = { 0.0f, 0.0f, 0.0f };
+	float scale = 1.0f;
 
 };
 

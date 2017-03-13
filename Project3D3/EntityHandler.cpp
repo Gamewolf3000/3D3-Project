@@ -34,7 +34,7 @@ void EntityHandler::BindPipeline(Entity * entity, std::string nameOfVS, std::str
 	pipelineJobs.push_back(PipelineJob(entity->entityID, nameOfVS, nameOfPS));
 }
 
-void EntityHandler::SetTransform(Entity * entity, float pos[3], float rot[3])
+void EntityHandler::SetTransform(Entity * entity, float pos[3], float rot[3], float scale)
 {
 	TransformJob temp(entity->entityID);
 
@@ -43,6 +43,8 @@ void EntityHandler::SetTransform(Entity * entity, float pos[3], float rot[3])
 		temp.position[i] = pos[i];
 		temp.rotation[i] = rot[i];
 	}
+
+	temp.scale = scale;
 
 	transformJobs.push_back(temp);
 
