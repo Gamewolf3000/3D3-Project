@@ -31,6 +31,9 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
 
+	timer = new TimerClass;
+	timer->Reset();
+
 	std::cout << "We think it worked to create the Wrapper. We don't check that." << std::endl;
 }
 
@@ -46,6 +49,8 @@ D3D12Wrapper::~D3D12Wrapper()
 
 void D3D12Wrapper::Render(EntityHandler* handler)
 {
+	DisplayFps();
+	timer->Tick();
 	const std::vector<Entity*> &entities = handler->GetEntityVector();
 	
 	commandAllocator->Reset();
@@ -105,7 +110,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	
 		//Handle the job
 	}
-	//handler->GetTransformJobs().clear();
+	handler->GetTransformJobs().clear();
 
 	for (auto &meshJobs : handler->GetMeshJobs())
 	{
@@ -552,6 +557,29 @@ void D3D12Wrapper::CreatePipelines()
 
 	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "MeshTestPS.hlsl", layoutData2);
 
+}
+
+void D3D12Wrapper::DisplayFps()
+{
+	static int frameCount = 0;
+	static float timeElapsed = 0.0f;
+
+	frameCount++;
+
+	if ((timer->time() - timeElapsed) > 1.0f)
+	{
+		float fps = (float)frameCount;
+		float mspf = 1000.0f / fps;
+
+		std::wostringstream outs;
+		outs.precision(6);
+		outs << L"JochEngineEX" << L"    " << L"FPS:  " << fps << L"    " << L"Frame Time: " << mspf
+			<< L"  (ms)";
+		SetWindowText(window, outs.str().c_str());
+
+		frameCount = 0;
+		timeElapsed += 1.0f;
+	}
 }
 
 void D3D12Wrapper::WaitForGPU()

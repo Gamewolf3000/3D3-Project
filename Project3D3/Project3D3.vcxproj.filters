@@ -147,6 +147,9 @@
     <ClCompile Include="DXTK12\WICTextureLoader.cpp">
       <Filter>DIRECTXTK</Filter>
     </ClCompile>
+    <ClCompile Include="TimerClass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D3D12Wrapper.h">
@@ -292,6 +295,9 @@
     </ClInclude>
     <ClInclude Include="DXTK12\VertexTypes.h">
       <Filter>DIRECTXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="TimerClass.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

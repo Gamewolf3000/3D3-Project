@@ -6,6 +6,7 @@
 #include <dxgi1_5.h> //Only used for initialization of the device and swap chain.
 #include <d3dcompiler.h>
 #include "JEXMath.h"
+#include "TimerClass.h"
 
 #pragma comment (lib, "d3d12.lib")
 #pragma comment (lib, "DXGI.lib")
@@ -18,6 +19,8 @@
 #include "MeshHandler.h"
 #include "TextureHandler.h"
 #include "LightHandler.h"
+
+#include <sstream>
 
 #define NUM_SWAP_BUFFERS 2
 
@@ -78,13 +81,13 @@ private:
 	UINT8 constantBufferID;
 	UINT8 vpID;
 	UINT8 lightID;
-	float rotation = JEX_PI / 2;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
 
 	D3D12_VIEWPORT vp;
 	D3D12_RECT scissorRect;
 
+	TimerClass* timer;
 
 	float clearColor[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 	int frameIndex = 0;
@@ -100,6 +103,7 @@ private:
 	void CreateDepthStencil();
 
 	void CreatePipelines();
+	void DisplayFps();
 
 	void WaitForGPU();
 

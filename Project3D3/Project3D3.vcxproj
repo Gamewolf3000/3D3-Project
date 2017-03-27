@@ -189,6 +189,7 @@
     <ClCompile Include="OBJLoader.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="TextureHandler.cpp" />
+    <ClCompile Include="TimerClass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CD3DX12Helper.h" />
@@ -239,6 +240,7 @@
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="ShaderResourceView.h" />
     <ClInclude Include="TextureHandler.h" />
+    <ClInclude Include="TimerClass.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="MeshTestVS.hlsl">
