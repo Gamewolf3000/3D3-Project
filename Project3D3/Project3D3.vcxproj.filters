@@ -313,6 +313,9 @@
     <FxCompile Include="MeshTestPS.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
+    <FxCompile Include="TestComputeShader.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="DXTK12\SimpleMath.inl">

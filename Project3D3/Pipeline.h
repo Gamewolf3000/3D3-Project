@@ -31,7 +31,8 @@ enum ResourceType
 {
 	CBV,
 	SRV,
-	SAMPLER
+	SAMPLER, // not implemented in compute pipeline
+	UAV // not implemented in graphics pipeline
 };
 
 struct ResourceDescription
@@ -76,9 +77,12 @@ private:
 	ID3D12Device* device;
 
 	std::vector<PipelineData*> pipelines;
+	std::vector<PipelineData*> computePipelines;
 
 	void CreateRootSignature(PipelineData* data, RootSignatureData rootData);
 	void CreatePipelineStateObject(PipelineData* data, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData);
+
+	ID3D12RootSignature* CreateComputeRootSignature(RootSignatureData rootData);
 
 
 public:
@@ -87,6 +91,9 @@ public:
 
 	UINT8 CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData);
 	void SetPipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cmdList);
+
+	UINT8 CreateComputePipeline(RootSignatureData rsData, std::string cs);
+	void SetComputePipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cmdList);
 
 };
 

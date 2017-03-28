@@ -104,6 +104,7 @@ private:
 
 	void CreatePipelines();
 	void DisplayFps();
+	void DispatchComputeShader();
 
 	void WaitForGPU();
 
@@ -125,6 +126,7 @@ public:
 
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
+	UINT8 computePipelineID = -1;
 	ConstantBufferHandler *constantBufferHandler;
 
 	void MoveCamera(Float3D position, float rotation);

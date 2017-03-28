@@ -30,6 +30,7 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
+	computePipelineID = pipelineHandler->CreateComputePipeline(RootSignatureData(), "TestComputeShader.hlsl");
 
 	timer = new TimerClass;
 	timer->Reset();
@@ -218,6 +219,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	commandList->Close();
 
 	Present();
+
+	DispatchComputeShader();
 }
 
 void D3D12Wrapper::MoveCamera(Float3D position, float rotation)
@@ -580,6 +583,39 @@ void D3D12Wrapper::DisplayFps()
 		frameCount = 0;
 		timeElapsed += 1.0f;
 	}
+}
+
+void D3D12Wrapper::DispatchComputeShader()
+{
+	commandAllocator->Reset();
+	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+
+	//pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pUavResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+	//pCommandList->SetPipelineState(m_computeState.Get());
+	//pCommandList->SetComputeRootSignature(m_computeRootSignature.Get());
+	pipelineHandler->SetComputePipelineState(computePipelineID, commandList);
+
+	//ID3D12DescriptorHeap* ppHeaps[] = { m_srvUavHeap.Get() };
+	//pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	//CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(), srvIndex + threadIndex, m_srvUavDescriptorSize);
+	//CD3DX12_GPU_DESCRIPTOR_HANDLE uavHandle(m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(), uavIndex + threadIndex, m_srvUavDescriptorSize);
+
+	//pCommandList->SetComputeRootConstantBufferView(ComputeRootCBV, m_constantBufferCS->GetGPUVirtualAddress());
+	//pCommandList->SetComputeRootDescriptorTable(ComputeRootSRVTable, srvHandle);
+	//pCommandList->SetComputeRootDescriptorTable(ComputeRootUAVTable, uavHandle);
+
+	commandList->Dispatch(1, 1, 1);
+	commandList->Close();
+
+
+	ID3D12CommandList* listsToExecute[] = { commandList };
+	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+
+	WaitForGPU();
+
+	//pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pUavResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 }
 
 void D3D12Wrapper::WaitForGPU()
