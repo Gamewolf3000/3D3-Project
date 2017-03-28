@@ -73,6 +73,9 @@ private:
 	ID3D12Resource* renderTargets[NUM_SWAP_BUFFERS];
 	ID3D12DescriptorHeap* depthStencileHeap = nullptr;
 	ID3D12Resource* depthstencil = nullptr;
+	ID3D12DescriptorHeap* computeShaderResourceHeapSRV = nullptr;
+	ID3D12DescriptorHeap* computeShaderResourceHeapUAV = nullptr;
+	ID3D12Resource* computeShaderResource = nullptr;
 
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
@@ -101,6 +104,7 @@ private:
 	void CreateRenderTargets();
 	void CreateViewportAndScissorRect();
 	void CreateDepthStencil();
+	void SetupComputeShader();
 
 	void CreatePipelines();
 	void DisplayFps();

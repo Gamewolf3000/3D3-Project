@@ -30,7 +30,7 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
-	computePipelineID = pipelineHandler->CreateComputePipeline(RootSignatureData(), "TestComputeShader.hlsl");
+	SetupComputeShader();
 
 	timer = new TimerClass;
 	timer->Reset();
@@ -488,6 +488,66 @@ void D3D12Wrapper::CreateDepthStencil()
 	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 }
 
+void D3D12Wrapper::SetupComputeShader()
+{
+	HRESULT hr;
+
+	RootSignatureData rsData;
+	ResourceDescription UAV;
+	UAV.type = ResourceType::UAV;
+	UAV.shaderRegister = 0;
+	rsData.type.push_back(UAV);
+
+	computePipelineID = pipelineHandler->CreateComputePipeline(rsData, "TestComputeShader.hlsl");
+
+	D3D12_DESCRIPTOR_HEAP_DESC uavHeapDesc = {};
+	uavHeapDesc.NumDescriptors = 1;
+	uavHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	uavHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+	hr = device->CreateDescriptorHeap(&uavHeapDesc, IID_PPV_ARGS(&computeShaderResourceHeapSRV));
+	hr = device->CreateDescriptorHeap(&uavHeapDesc, IID_PPV_ARGS(&computeShaderResourceHeapUAV));
+
+	D3D12_RESOURCE_DESC texDesc;
+	ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
+	texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.Alignment = 0;
+	texDesc.Width = windowWidth;
+	texDesc.Height = windowHeight;
+	texDesc.DepthOrArraySize = 1;
+	texDesc.MipLevels = 1;
+	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	hr = device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&texDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(&computeShaderResource));
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	uavDesc.Texture2D.MipSlice = 0;
+
+	device->CreateShaderResourceView(computeShaderResource, &srvDesc, computeShaderResourceHeapSRV->GetCPUDescriptorHandleForHeapStart());
+	device->CreateUnorderedAccessView(computeShaderResource, nullptr, &uavDesc, computeShaderResourceHeapUAV->GetCPUDescriptorHandleForHeapStart());
+
+
+
+}
+
 void D3D12Wrapper::CreatePipelines()
 {
 	RootSignatureData rootData;
@@ -605,6 +665,8 @@ void D3D12Wrapper::DispatchComputeShader()
 	//pCommandList->SetComputeRootConstantBufferView(ComputeRootCBV, m_constantBufferCS->GetGPUVirtualAddress());
 	//pCommandList->SetComputeRootDescriptorTable(ComputeRootSRVTable, srvHandle);
 	//pCommandList->SetComputeRootDescriptorTable(ComputeRootUAVTable, uavHandle);
+	commandList->SetDescriptorHeaps(1, &computeShaderResourceHeapUAV);
+	commandList->SetComputeRootDescriptorTable(0, computeShaderResourceHeapUAV->GetGPUDescriptorHandleForHeapStart());
 
 	commandList->Dispatch(1, 1, 1);
 	commandList->Close();

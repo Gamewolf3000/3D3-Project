@@ -184,11 +184,6 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 ID3D12RootSignature * Pipeline::CreateComputeRootSignature(RootSignatureData rootData)
 {
 	ID3D12RootSignature* returnPtr = nullptr;
-	if (rootData.type.size() != rootData.visibility.size())
-	{
-		// SHITS GONE HORRIBLY WRONG
-		return nullptr;
-	}
 
 	CD3DX12_DESCRIPTOR_RANGE* descRanges = new CD3DX12_DESCRIPTOR_RANGE[rootData.type.size()];
 	for (int i = 0; i < rootData.type.size(); i++)
@@ -207,8 +202,8 @@ ID3D12RootSignature * Pipeline::CreateComputeRootSignature(RootSignatureData roo
 		}
 	}
 
-	CD3DX12_ROOT_PARAMETER* rootParameters = new CD3DX12_ROOT_PARAMETER[rootData.visibility.size()];
-	for (int i = 0; i < rootData.visibility.size(); i++)
+	CD3DX12_ROOT_PARAMETER* rootParameters = new CD3DX12_ROOT_PARAMETER[rootData.type.size()];
+	for (int i = 0; i < rootData.type.size(); i++)
 	{
 		rootParameters[i].InitAsDescriptorTable(1, &descRanges[i], D3D12_SHADER_VISIBILITY_ALL);
 	}
