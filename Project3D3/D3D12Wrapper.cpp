@@ -636,7 +636,7 @@ void D3D12Wrapper::DisplayFps()
 
 		std::wostringstream outs;
 		outs.precision(6);
-		outs << L"JochEngineEX" << L"    " << L"FPS:  " << fps << L"    " << L"Frame Time: " << mspf
+		outs << L"AWESOME LIGHTING IN D12 THAT MIGHT OR MIGHT NOT WORK INCLUDING SOME KIND OF DEFFERED STUFF FOR PERFOMANCE NOOBS" << L"    " << L"FPS:  " << fps << L"    " << L"Frame Time: " << mspf
 			<< L"  (ms)";
 		SetWindowText(window, outs.str().c_str());
 
