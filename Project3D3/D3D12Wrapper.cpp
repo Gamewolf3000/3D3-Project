@@ -216,11 +216,12 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
 
+	DispatchComputeShader();
+
 	commandList->Close();
 
 	Present();
 
-	DispatchComputeShader();
 }
 
 void D3D12Wrapper::MoveCamera(Float3D position, float rotation)
@@ -646,9 +647,9 @@ void D3D12Wrapper::DisplayFps()
 }
 
 void D3D12Wrapper::DispatchComputeShader()
-{
+{/*
 	commandAllocator->Reset();
-	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+	HRESULT hr = commandList->Reset(commandAllocator, nullptr);*/
 
 	//pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pUavResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
@@ -669,14 +670,14 @@ void D3D12Wrapper::DispatchComputeShader()
 	commandList->SetComputeRootDescriptorTable(0, computeShaderResourceHeapUAV->GetGPUDescriptorHandleForHeapStart());
 
 	commandList->Dispatch(1, 1, 1);
-	commandList->Close();
+	/*commandList->Close();
 
 
 	ID3D12CommandList* listsToExecute[] = { commandList };
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
 	WaitForGPU();
-
+*/
 	//pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pUavResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 }
 
