@@ -1,4 +1,5 @@
 Texture2D sampleTexture : register(t0);
+Texture2D shadowMap : register(t1);
 sampler samplerState : register(s0);
 
 struct vertexData
@@ -23,5 +24,5 @@ cbuffer LightData : register(b0)
 float4 main(vertexData data) : SV_Target
 {
 	//return float4(1.0f, 1.0f, 1.0f, 1.0f);
-	return float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f);
+	return float4(shadowMap.Sample(samplerState, data.uv).xyz, 1.0f);
 }

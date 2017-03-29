@@ -75,7 +75,8 @@ private:
 	ID3D12Resource* depthstencil = nullptr;
 	ID3D12DescriptorHeap* computeShaderResourceHeapSRV = nullptr;
 	ID3D12DescriptorHeap* computeShaderResourceHeapUAV = nullptr;
-	ID3D12Resource* computeShaderResource = nullptr;
+	ID3D12Resource* computeShaderResourceOutput = nullptr;
+	ID3D12Resource* computeShaderResourceInput = nullptr;
 
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
@@ -109,6 +110,7 @@ private:
 	void CreatePipelines();
 	void DisplayFps();
 	void DispatchComputeShader();
+	void CopyDepthBuffer();
 
 	void WaitForGPU();
 
