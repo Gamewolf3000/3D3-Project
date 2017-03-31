@@ -150,7 +150,6 @@ void Update(D3D12Wrapper& graphics, EntityHandler & handler)
 		cameraRot += 0.004f;
 	}
 	
-	//cameraRot += 0.004f;
 	graphics.MoveCamera(cameraPos, cameraRot);
 
 	float position[3] = { 0.0f, -3.0f, 0.0f };

@@ -66,6 +66,10 @@ private:
 	UINT64 fenceValue;
 	HANDLE eventHandle;
 
+	ID3D12Fence* prePassFence;
+	UINT64 prePassFenceValue;
+	HANDLE prePassEventHandle;
+
 	ID3D12DescriptorHeap* renderTargetsHeap;
 
 	void* textureBufferCPU_mappedPtr;
@@ -77,6 +81,9 @@ private:
 	ID3D12DescriptorHeap* computeShaderResourceHeapUAV = nullptr;
 	ID3D12Resource* computeShaderResourceOutput = nullptr;
 	ID3D12Resource* computeShaderResourceInput = nullptr;
+	ID3D12Resource* computeShaderResourceMeshes = nullptr;
+	ID3D12Resource* computeShaderResourceFrameData = nullptr;
+	ID3D12Resource* computeShaderResourceLightData = nullptr;
 
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
@@ -87,6 +94,7 @@ private:
 	UINT8 lightID;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
+	Float3D camPos;
 
 	D3D12_VIEWPORT vp;
 	D3D12_RECT scissorRect;
