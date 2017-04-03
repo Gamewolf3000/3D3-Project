@@ -61,7 +61,7 @@ void Pipeline::CreateRootSignature(PipelineData * data, RootSignatureData rootDa
 	delete rootParameters;
 }
 
-void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData)
+void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData, bool deferredRendering)
 {
 	std::wstring temp(vs.begin(), vs.end());
 	LPCWSTR fileName = temp.c_str();
@@ -151,6 +151,12 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 	//Specify render target and depthstencil usage.
 	gpsd.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	gpsd.NumRenderTargets = 1;
+	if (deferredRendering)
+	{
+		gpsd.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		gpsd.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		gpsd.NumRenderTargets = 3;
+	}
 
 	gpsd.SampleDesc.Count = 1;
 	gpsd.SampleMask = UINT_MAX;
@@ -250,12 +256,12 @@ Pipeline::~Pipeline()
 	}
 }
 
-UINT8 Pipeline::CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData)
+UINT8 Pipeline::CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData, bool deferredRendering)
 {
 	PipelineData* data = new PipelineData();
 
 	CreateRootSignature(data, rootData);
-	CreatePipelineStateObject(data, vs, ps, layoutData);
+	CreatePipelineStateObject(data, vs, ps, layoutData, deferredRendering);
 
 	pipelines.push_back(data);
 

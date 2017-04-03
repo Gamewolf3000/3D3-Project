@@ -80,7 +80,7 @@ private:
 	std::vector<PipelineData*> computePipelines;
 
 	void CreateRootSignature(PipelineData* data, RootSignatureData rootData);
-	void CreatePipelineStateObject(PipelineData* data, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData);
+	void CreatePipelineStateObject(PipelineData* data, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData, bool deferredRendering);
 
 	ID3D12RootSignature* CreateComputeRootSignature(RootSignatureData rootData);
 
@@ -89,7 +89,7 @@ public:
 	Pipeline(ID3D12Device* dev);
 	~Pipeline();
 
-	UINT8 CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData);
+	UINT8 CreatePipeline(RootSignatureData rootData, std::string vs, std::string ps, std::vector<InputLayoutData> layoutData, bool deferredRendering = false);
 	void SetPipelineState(UINT8 pipelineID, ID3D12GraphicsCommandList * cmdList);
 
 	UINT8 CreateComputePipeline(RootSignatureData rsData, std::string cs);

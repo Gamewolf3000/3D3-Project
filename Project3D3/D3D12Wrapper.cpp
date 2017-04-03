@@ -2,6 +2,7 @@
 #include <iostream>
 #include "LightHandler.h"
 
+
 D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT16 height)
 {
 	CoInitialize(NULL);
@@ -28,6 +29,7 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 	MatrixToFloat4x4(vpStruct->viewMatrix, MatrixTranspose(MatrixViewLH(VecCreate(0, 0, -1, 1), VecCreate(0, 0, 0, 1), VecCreate(0, 1, 0, 0))));
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
+	camPos = Float3D(0.0f, 0.0f, -1.0f);
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
 	SetupComputeShader();
@@ -213,7 +215,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		}
 	}
 
-	//commandList->DrawInstanced(6, 1, 0, 0);
+	commandList->DrawInstanced(6, 1, 0, 0);
 
 	SetResourceTransitionBarrier(commandList,
 		renderTargets[frameIndex],
@@ -221,7 +223,7 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
 
-	DispatchComputeShader();
+	//DispatchComputeShader();
 
 	commandList->Close();
 
@@ -233,6 +235,8 @@ void D3D12Wrapper::MoveCamera(Float3D position, float rotation)
 {
 	Vec lookDir = VecCreate(0, 0, 1, 0);
 	Vec positionVec = VecCreate(position.x, position.y, position.z, 1.0f);
+
+	camPos = position;
 
 	Matrix rotMatrix = MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), rotation);
 
@@ -578,6 +582,145 @@ void D3D12Wrapper::SetupComputeShader()
 
 }
 
+void D3D12Wrapper::InitializeDeferredRendering()
+{
+	RootSignatureData rootData[2];
+	ResourceDescription CBV;
+
+	/*Rasterizing Stage*/
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData[0].type.push_back(CBV);
+	rootData[0].visibility.push_back(VERTEX);
+	CBV.shaderRegister = 1;
+	rootData[0].type.push_back(CBV);
+	rootData[0].visibility.push_back(VERTEX);
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData[0].type.push_back(CBV);
+	rootData[0].visibility.push_back(PIXEL);
+
+	ResourceDescription SRV;
+	SRV.shaderRegister = 0;
+	SRV.type = ResourceType::SRV;
+	rootData[0].type.push_back(SRV);
+	rootData[0].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 1;
+	SRV.type = ResourceType::SRV;
+	rootData[0].type.push_back(SRV);
+	rootData[0].visibility.push_back(PIXEL);
+
+	ResourceDescription SAMP;
+	SAMP.shaderRegister = 0;
+	SAMP.type = ResourceType::SAMPLER;
+	rootData[0].type.push_back(SAMP);
+	rootData[0].visibility.push_back(PIXEL);
+
+	std::vector<InputLayoutData> layoutData;
+	InputLayoutData tempLayout;
+	tempLayout.inputName = "POSITION";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "TEXCOORDS";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_2;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "NORMAL";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "TANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "BITANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+
+	deferredPipelineID[0] = pipelineHandler->CreatePipeline(rootData[0], "RasterizingStageVS.hlsl", "RasterizingStagePS.hlsl", layoutData, true);
+
+
+	/*Rendering Resources*/
+
+	//Create descriptor heap for render target views.
+	D3D12_DESCRIPTOR_HEAP_DESC dhd = {};
+	dhd.NumDescriptors = 3;
+	dhd.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+
+	HRESULT hr = device->CreateDescriptorHeap(&dhd, IID_PPV_ARGS(&GBufferHeap));
+
+	//Create resources for the render targets.
+	renderTargetDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	D3D12_CPU_DESCRIPTOR_HANDLE cdh = GBufferHeap->GetCPUDescriptorHandleForHeapStart();
+
+	D3D12_RESOURCE_DESC rDesc;
+
+	rDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	rDesc.Width = windowWidth;
+	rDesc.Height = windowHeight; 
+	rDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	rDesc.DepthOrArraySize = 1;
+	rDesc.MipLevels = 1;
+	rDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	rDesc.SampleDesc.Count = 1;
+	rDesc.SampleDesc.Quality = 0;
+	rDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+	rDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE clear;
+	clear.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	clear.Color[0] = 0.0f;
+	clear.Color[1] = 0.0f;
+	clear.Color[2] = 0.0f;
+	clear.Color[3] = 1.0f;
+
+	//One RTV for each GBuffer.
+	for (UINT n = 0; n < 3; n++)
+	{
+		hr = device->CreateReservedResource(&rDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &clear, IID_PPV_ARGS(&GBuffers[n]));
+		device->CreateRenderTargetView(GBuffers[n], nullptr, cdh);
+		cdh.ptr += renderTargetDescriptorSize;
+	}
+
+
+
+
+
+	/*Light-Pass*/
+
+	layoutData.clear();
+
+	CBV.type = ResourceType::CBV;
+	rootData[1].type.push_back(CBV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 0;
+	SRV.type = ResourceType::SRV;
+	rootData[1].type.push_back(SRV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 1;
+	SRV.type = ResourceType::SRV;
+	rootData[1].type.push_back(SRV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 2;
+	SRV.type = ResourceType::SRV;
+	rootData[1].type.push_back(SRV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[0], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, true);
+
+
+}
+
+void D3D12Wrapper::SetupDeferredRendering()
+{
+}
+
 void D3D12Wrapper::CreatePipelines()
 {
 	RootSignatureData rootData;
@@ -655,6 +798,7 @@ void D3D12Wrapper::CreatePipelines()
 
 	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "MeshTestPS.hlsl", layoutData2);
 
+	InitializeDeferredRendering();
 }
 
 void D3D12Wrapper::DisplayFps()
@@ -732,6 +876,7 @@ void D3D12Wrapper::WaitForGPU()
 		this->fence->SetEventOnCompletion(fence, eventHandle);
 		WaitForSingleObject(eventHandle, INFINITE);
 	}
+	
 }
 
 void D3D12Wrapper::SetResourceTransitionBarrier(ID3D12GraphicsCommandList * commandList, ID3D12Resource * resource, D3D12_RESOURCE_STATES StateBefore, D3D12_RESOURCE_STATES StateAfter)
@@ -803,6 +948,12 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&fence);
 
 	SafeRelease(&renderTargetsHeap);
+	for(int i = 0; i < 3; i++)
+		SafeRelease(&GBuffers[i]);
+
+	SafeRelease(&GBufferHeap);
+	
+	
 	/*SafeRelease(&samplerHeap);*/
 	//SafeRelease(&textureHeap);
 	for (int i = 0; i < NUM_SWAP_BUFFERS; i++)

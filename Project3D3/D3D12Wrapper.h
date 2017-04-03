@@ -87,6 +87,7 @@ private:
 	UINT8 lightID;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
+	Float3D camPos;
 
 	D3D12_VIEWPORT vp;
 	D3D12_RECT scissorRect;
@@ -124,6 +125,27 @@ private:
 	void Present();
 	D3D12Wrapper();
 
+
+	/*-----------------------------------------------------
+	Deferred Rendering Specifics Starts Right Here
+	-------------------------------------------------------*/
+
+	/*Variables*/
+	UINT8 deferredPipelineID[2] = { (UINT8)-1, (UINT8)-1 };
+	ID3D12DescriptorHeap* GBufferHeap;
+	ID3D12Resource *GBuffers[3];
+	enum GBuffers {
+		GBUFFER_NORMAL,
+		GBUFFER_COLOUR,
+		GBUFFER_POS
+	};
+
+	/*Functions*/
+	void InitializeDeferredRendering();
+	void SetupDeferredRendering();
+	void LightPass();
+
+
 public:
 	D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT16 height);
 	~D3D12Wrapper();
@@ -133,6 +155,7 @@ public:
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
 	UINT8 computePipelineID = -1;
+	
 	ConstantBufferHandler *constantBufferHandler;
 
 	void MoveCamera(Float3D position, float rotation);

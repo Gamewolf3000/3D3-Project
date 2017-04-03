@@ -16,6 +16,9 @@
     <Filter Include="DIRECTXTK">
       <UniqueIdentifier>{9fb954ac-8448-409c-ad3a-69e7533434cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Deferred Rendering Pipeline">
+      <UniqueIdentifier>{a04e558e-f3f9-40a4-9540-0c31d8c57c52}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -315,6 +318,18 @@
     </FxCompile>
     <FxCompile Include="TestComputeShader.hlsl">
       <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RasterizingStageVS.hlsl">
+      <Filter>Resource Files\Deferred Rendering Pipeline</Filter>
+    </FxCompile>
+    <FxCompile Include="RasterizingStagePS.hlsl">
+      <Filter>Resource Files\Deferred Rendering Pipeline</Filter>
+    </FxCompile>
+    <FxCompile Include="LightningStageVS.hlsl">
+      <Filter>Resource Files\Deferred Rendering Pipeline</Filter>
+    </FxCompile>
+    <FxCompile Include="LightningStagePS.hlsl">
+      <Filter>Resource Files\Deferred Rendering Pipeline</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
