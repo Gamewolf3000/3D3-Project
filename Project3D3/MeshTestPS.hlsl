@@ -26,8 +26,9 @@ float4 main(vertexData data) : SV_Target
 	float2 xyCoords = data.pos.xy;
 	xyCoords += 1.0f;
 	xyCoords *= 0.5f;
+
 	//return float4(shadowMap.Sample(samplerState, xyCoords).xyz, 1.0f);
 
 	//return float4(1.0f, 1.0f, 1.0f, 1.0f);
-	return float4(shadowMap.Sample(samplerState, data.uv).xyz, 1.0f);
+	return float4(shadowMap.Sample(samplerState, data.uv).xyz, 1.0f) * shadowMap.Sample(samplerState, xyCoords).x;
 }
