@@ -136,20 +136,20 @@ void main( uint3 threadID : SV_DispatchThreadID )
 
 	//posW /= posW.w;
 
-	float3 origin = float3(0.0f, 0.0f, 0.0f);
+	float3 origin = float3(2.0f, 0.0f, 0.0f);
 	//float3 direction = (mul(float4(posV.xyz, 1.0f), revViewMat)).xyz;
 	float distance = length(posW.xyz - origin);
 	float3 direction = normalize(posW.xyz - origin);
 
-	map[threadID.xy] = depthValue;
+	map[threadID.xy] = 1;
 
-	//for (int i = 0; i < nrOfTriangles; i++)
-	//{
-	//	float temp = rayVsMeshTriangle(origin, direction, i * 3);
+	for (int i = 0; i < nrOfTriangles; i++)
+	{
+		float temp = rayVsMeshTriangle(origin, direction, i * 3);
 
-	//	//if (temp < distance)
-	//	//	map[threadID.xy] = 0.0f;
-	//}
+		if (temp < distance)
+			map[threadID.xy] = 0.0f;
+	}
 
 	//map[threadID.xy] = distance;
 
