@@ -160,16 +160,19 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 			nrOfTriangles += rData.nrOfTriangles;
 		}
 	}
-
+	void* dataPtr2;
 	ViewProjectionStruct tempVP;
+	
+	MatrixToFloat4x4(tempVP.projectionMatrix, MatrixTranspose(MatrixInvert(Float4x4ToMatrix(vpStruct->projectionMatrix))));
+	MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(Float4x4ToMatrix(vpStruct->viewMatrix))));
 
-	MatrixToFloat4x4(tempVP.projectionMatrix, MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)));
-	MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)));
-
-	computeShaderResourceFrameData->Map(0, &range, &dataPtr);
-	memcpy((char*)dataPtr, &tempVP, sizeof(Float4x4) * 2);
-	memcpy((char*)dataPtr + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
-	memcpy((char*)dataPtr + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
+	computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
+	memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
+	memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
+	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
+	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
+	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
+	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
 	computeShaderResourceFrameData->Unmap(0, nullptr);
 
 	vertexOffset = 0;
@@ -567,6 +570,11 @@ void D3D12Wrapper::SetupComputeShader()
 	CBV.rType = CBV_ROOT;
 	rsData.type.push_back(CBV);
 
+	ResourceDescription SAMPLER;
+	SAMPLER.type = ResourceType::SAMPLER;
+	SAMPLER.shaderRegister = 0;
+	rsData.type.push_back(SAMPLER);
+
 	computePipelineID = pipelineHandler->CreateComputePipeline(rsData, "TestComputeShader.hlsl");
 
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -658,7 +666,7 @@ void D3D12Wrapper::SetupComputeShader()
 	device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D)),
+		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&computeShaderResourceFrameData)

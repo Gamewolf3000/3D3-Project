@@ -46,6 +46,7 @@
 #define MatrixGetTransposed(matrix) DirectX::XMMatrixTranspose(matrix)
 #define MatrixTranspose(matrix) matrix = DirectX::XMMatrixTranspose(matrix)
 #define MatrixGetDeterminant(matrix) DirectX::XMVectorGetByIndex(XMMatrixDeterminant(matrix), 0)
+#define MatrixInvert(matrix) DirectX::XMMatrixInverse(nullptr, matrix)
 
 #define MatrixToFloat4x4(float4x4, matrix) DirectX::XMStoreFloat4x4(&float4x4, matrix)
 #define Float4x4ToMatrix(float4x4) DirectX::XMLoadFloat4x4(&float4x4)

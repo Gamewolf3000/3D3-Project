@@ -52,8 +52,8 @@ class D3D12Wrapper
 private:
 	HWND window;
 
-	UINT16 windowHeight;
-	UINT16 windowWidth;
+	UINT32 windowHeight;
+	UINT32 windowWidth;
 
 	ID3D12Device* device;
 	ID3D12GraphicsCommandList* commandList;

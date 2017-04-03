@@ -141,6 +141,15 @@ void Update(D3D12Wrapper& graphics, EntityHandler & handler)
 		cameraPos.z -= 0.01f;
 	}
 
+	if ((GetKeyState('U') & 0x80))
+	{
+		cameraPos.y += 0.01f;
+	}
+	else if ((GetKeyState('N') & 0x80))
+	{
+		cameraPos.y -= 0.01f;
+	}
+
 	if ((GetKeyState('Q') & 0x80))
 	{
 		cameraRot -= 0.004f;
