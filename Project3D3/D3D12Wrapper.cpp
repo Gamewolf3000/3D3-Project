@@ -826,8 +826,9 @@ void D3D12Wrapper::CopyDepthBuffer()
 	const UINT64 fence = fenceValue;
 	hr = commandQueue->Signal(prePassFence, fence);
 	prePassFenceValue++;
-
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
 	commandList->CopyResource(computeShaderResourceInput, depthstencil);
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 }
 
 void D3D12Wrapper::WaitForGPU()
