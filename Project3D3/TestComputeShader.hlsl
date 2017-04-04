@@ -66,10 +66,10 @@ float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint)
 	points[0] = meshPositions[indexFirstPoint + 0].position;
 	points[1] = meshPositions[indexFirstPoint + 1].position;
 	points[2] = meshPositions[indexFirstPoint + 2].position;
-	//int sizeFactor = 10;
-	//points[0] = float3(-0.5f, -0.5f, 0.0f) * sizeFactor;
-	//points[1] = float3(0.5f, -0.5f, 0.0f) * sizeFactor;
-	//points[2] = float3(0.0f, 0.5f, 0.0f) * sizeFactor;
+	int sizeFactor = 2;
+	points[0] = float3(0.5f, -0.5f, 0.0f) * sizeFactor;
+	points[1] = float3(-0.5f, -0.5f, 0.0f) * sizeFactor;
+	points[2] = float3(0.0f, 0.5f, 0.0f) * sizeFactor;
 
 
 	float3 e1 = points[1].xyz - points[0].xyz;
@@ -130,13 +130,14 @@ float3 WorldPosFromDepth(float depth, float2 TexCoord) {
 void main( uint3 threadID : SV_DispatchThreadID )
 {
 	float2 xyCoords = threadID.xy / float2(windowWidth, windowHeight);
+	xyCoords.y *= -1.0f;
 	float depthValue = depth.SampleLevel(sampState, xyCoords, 0).x;
 
 	float3 posW = WorldPosFromDepth(depthValue, xyCoords);
 
 	//posW /= posW.w;
 
-	float3 origin = float3(2.0f, 0.0f, 0.0f);
+	float3 origin = float3(0.0f, 0.0f, -2.5f);
 	//float3 direction = (mul(float4(posV.xyz, 1.0f), revViewMat)).xyz;
 	float distance = length(posW.xyz - origin);
 	float3 direction = normalize(posW.xyz - origin);
@@ -145,10 +146,11 @@ void main( uint3 threadID : SV_DispatchThreadID )
 
 	for (int i = 0; i < nrOfTriangles; i++)
 	{
-		float temp = rayVsMeshTriangle(origin, direction, i * 3);
+		//float temp = rayVsMeshTriangle(origin, direction, i * 3);
+		float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 1);
 
 		if (temp < distance)
-			map[threadID.xy] = 0.0f;
+			map[threadID.xy] = 0.2f;
 	}
 
 	//map[threadID.xy] = distance;

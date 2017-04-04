@@ -78,7 +78,7 @@ void CreateEntities(EntityHandler & handler)
 
 	handler.SetTransform(stefanTablet, position, rotation, 1.0f);
 	handler.BindMesh(stefanTablet, "The_Mighty_Cube2.obj");
-	handler.BindTexture(stefanTablet, "stefanMega.jpg");
+	handler.BindTexture(stefanTablet, "smileCeption.png");
 
 	entities.push_back(stefanTablet);
 
