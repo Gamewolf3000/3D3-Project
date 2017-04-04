@@ -113,7 +113,7 @@ float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint)
 }
 
 float3 WorldPosFromDepth(float depth, float2 TexCoord) {
-	float z = depth * 2.0 - 1.0;
+	float z = depth;// *2.0 - 1.0;
 
 	float4 clipSpacePosition = float4(TexCoord * 2.0 - 1.0, z, 1.0);
 	float4 viewSpacePosition = mul(clipSpacePosition, revProjMat);
@@ -126,34 +126,48 @@ float3 WorldPosFromDepth(float depth, float2 TexCoord) {
 	return worldSpacePosition.xyz;
 }
 
-[numthreads(16, 16, 1)]
+[numthreads(16, 16, 1)] // matches 1280x720 with the dispatch call on the cpu
 void main( uint3 threadID : SV_DispatchThreadID )
 {
 	float2 xyCoords = threadID.xy / float2(windowWidth, windowHeight);
-	xyCoords.y *= -1.0f;
-	float depthValue = depth.SampleLevel(sampState, xyCoords, 0).x;
+	//xyCoords.y *= -1.0f;
+	float depthValue = depth[threadID.xy];
 
 	float3 posW = WorldPosFromDepth(depthValue, xyCoords);
 
-	//posW /= posW.w;
+	////posW /= posW.w;
 
-	float3 origin = float3(0.0f, 0.0f, -2.5f);
-	//float3 direction = (mul(float4(posV.xyz, 1.0f), revViewMat)).xyz;
+	float3 origin = camPos;
 	float distance = length(posW.xyz - origin);
-	float3 direction = normalize(posW.xyz - origin);
+	//float3 direction = normalize(posW.xyz - origin);
 
-	map[threadID.xy] = 1;
+	//if(posW.x < 0.001f && posW.x > -0.001f)
+	//	map[threadID.xy] = 1;
+	//else
+	//	map[threadID.xy] = 0;
 
-	for (int i = 0; i < nrOfTriangles; i++)
-	{
-		//float temp = rayVsMeshTriangle(origin, direction, i * 3);
-		float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 1);
+	//map[threadID.xy] = 1;
 
-		if (temp < distance)
-			map[threadID.xy] = 0.2f;
-	}
+	//for (int i = 0; i < nrOfTriangles; i++)
+	//{
+	//	//float temp = rayVsMeshTriangle(origin, direction, i * 3);
+	//	float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 0.5);
 
-	//map[threadID.xy] = distance;
+	//	if (temp < distance)
+	//		map[threadID.xy] = 0.2f;
+	//}
+
+	//if(depthValue > 1)
+	//	map[threadID.xy] = 0.0;
+	//else
+	//	map[threadID.xy] = depthValue;
+
+	map[threadID.xy] = distance;
+
+	//if(distance < 1)
+		//map[threadID.xy] = distance / 10;
+	//else
+		//map[threadID.xy] = 0.0f;
 
 	//for (int l = 0; l < NROFLIGHTS; l++)
 	//{
