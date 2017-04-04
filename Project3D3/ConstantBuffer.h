@@ -20,7 +20,8 @@ public:
 		VERTEX_SHADER_PER_OBJECT_DATA,
 		VERTEX_SHADER_PER_FRAME_DATA,
 		PIXEL_SHADER_LIGHT_DATA,
-		COMPUTE_LIGHT_DATA
+		COMPUTE_LIGHT_DATA,
+		COMPUTE_CAMERA_POS
 	};
 	/*MUST be set by the caller. Data to create the "size" of the buffers.
 	NOTE: If the above enum gets extra data, so must the struct!*/
@@ -29,6 +30,7 @@ public:
 		UINT16 VERTEX_SHADER_PER_FRAME_DATA_SIZE = 0;
 		UINT16 PIXEL_SHADER_LIGHT_DATA_SIZE = 0;
 		UINT16 COMPUTE_LIGHT_DATA_SIZE = 0;
+		UINT16 COMPUTE_CAMERA_POS_SIZE = 0;
 		UINT16 operator[](UINT index)
 		{
 			switch (index)
@@ -41,6 +43,8 @@ public:
 				return PIXEL_SHADER_LIGHT_DATA_SIZE;
 			case 3:
 				return COMPUTE_LIGHT_DATA_SIZE;
+			case 4:
+				return COMPUTE_CAMERA_POS_SIZE;
 			}
 		}
 	};

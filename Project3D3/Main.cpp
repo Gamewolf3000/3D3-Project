@@ -141,6 +141,15 @@ void Update(D3D12Wrapper& graphics, EntityHandler & handler)
 		cameraPos.z -= 0.01f;
 	}
 
+	if ((GetKeyState('U') & 0x80))
+	{
+		cameraPos.y += 0.01f;
+	}
+	else if ((GetKeyState('N') & 0x80))
+	{
+		cameraPos.y -= 0.01f;
+	}
+
 	if ((GetKeyState('Q') & 0x80))
 	{
 		cameraRot -= 0.004f;
@@ -154,7 +163,7 @@ void Update(D3D12Wrapper& graphics, EntityHandler & handler)
 	graphics.MoveCamera(cameraPos, cameraRot);
 
 	float position[3] = { 0.0f, -3.0f, 0.0f };
-	float rotation[3] = { 0.0f, stefanRotValue++ / 100.0f, 0.0f };
+	float rotation[3] = { 0.0f, 0.0f / 100.0f, 0.0f };
 
 	handler.SetTransform(entities[0], position, rotation, 1.0f);
 }

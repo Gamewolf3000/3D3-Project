@@ -2,6 +2,7 @@
 #include <iostream>
 #include "LightHandler.h"
 
+#define MAXIMUM_NR_OF_LIGHTS 5
 
 D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT16 height)
 {
@@ -14,15 +15,16 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 	pipelineHandler = new Pipeline(device);
 	CreatePipelines();
-	lightHandler = new LightHandler(512);
+	lightHandler = new LightHandler(MAXIMUM_NR_OF_LIGHTS);
 	meshHandler = new MeshHandler(device);
 	textureHandler = new TextureHandler(device);
 
 	auto sizes = ConstantBufferHandler::ConstantBufferSizes();
 	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(ConstantBufferStruct);
 	sizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE = sizeof(ViewProjectionStruct);
-	sizes.PIXEL_SHADER_LIGHT_DATA_SIZE = sizeof(LightHandler::PointLight);
+	sizes.PIXEL_SHADER_LIGHT_DATA_SIZE = sizeof(LightHandler::PointLight)*MAXIMUM_NR_OF_LIGHTS;
 	sizes.COMPUTE_LIGHT_DATA_SIZE = sizeof(float); /*To be edited!*/
+	sizes.COMPUTE_CAMERA_POS_SIZE = sizeof(Float4D);
 	constantBufferHandler = new ConstantBufferHandler(sizes, 512, device);
 
 	vpStruct = new ViewProjectionStruct;
@@ -30,6 +32,14 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	MatrixToFloat4x4(vpStruct->viewMatrix, MatrixTranspose(MatrixViewLH(VecCreate(0, 0, -1, 1), VecCreate(0, 0, 0, 1), VecCreate(0, 1, 0, 0))));
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
 	camPos = Float3D(0.0f, 0.0f, -1.0f);
+
+	float lightColour[4] = { 0.25f, 0.5f, 0.0f, 1.0f };
+	float position[4] = { 0.0f, 0.0f, -1.0f, 1.0f };
+	lightHandler->AddLight(0, lightColour, position, 20.0f);
+	
+	lightColour[2] = 0.75f;
+	position[2] = 1.0f;
+	lightHandler->AddLight(1, lightColour, position, 20.0f);
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
 	SetupComputeShader();
@@ -85,8 +95,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	pipelineHandler->SetPipelineState(meshPipelineID, commandList);
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
-	constantBufferHandler->UpdateBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
-	constantBufferHandler->BindBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
+	constantBufferHandler->UpdateBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
+	constantBufferHandler->BindBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
 
 
 	UINT index = 0;
@@ -721,11 +731,16 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	/*Light-Pass*/
 	
 	layoutData.clear();
-
-	/*CBV.type = ResourceType::CBV;
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
 	rootData[1].type.push_back(CBV);
 	rootData[1].visibility.push_back(PIXEL);
-	Fucking check what the fuck is going on*/
+
+	layoutData.clear();
+	CBV.shaderRegister = 1;
+	CBV.type = ResourceType::CBV;
+	rootData[1].type.push_back(CBV);
+	rootData[1].visibility.push_back(PIXEL);
 
 	SRV.shaderRegister = 0;
 	SRV.type = ResourceType::SRV;
@@ -742,7 +757,7 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	rootData[1].type.push_back(SRV);
 	rootData[1].visibility.push_back(PIXEL);
 
-	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[0], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, true);
+	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[1], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, true);
 	
 	/*Set the Render targets as shared resources*/
 	/*Creating a texture heap for the light pass*/
@@ -813,18 +828,27 @@ void D3D12Wrapper::LightPass()
 
 	ClearBuffer();
 
-
-
 	pipelineHandler->SetPipelineState(deferredPipelineID[1], commandList);
+
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::COMPUTE_CAMERA_POS, commandList);
+	constantBufferHandler->UpdateBuffer(camPosID, ConstantBufferHandler::ConstantBufferType::COMPUTE_CAMERA_POS, &camPos);
+	constantBufferHandler->BindBuffer(camPosID, ConstantBufferHandler::ConstantBufferType::COMPUTE_CAMERA_POS, 0);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::COMPUTE_CAMERA_POS, 0, 0, commandList);
+
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
+	constantBufferHandler->UpdateBuffer(lightID, ConstantBufferHandler::ConstantBufferType::PIXEL_SHADER_LIGHT_DATA, lightHandler->GatherLightJobs());
+	constantBufferHandler->BindBuffer(lightID, ConstantBufferHandler::ConstantBufferType::PIXEL_SHADER_LIGHT_DATA, 0);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 1, 0, commandList);
+
 	auto handle = GBufferHeapLightning->GetGPUDescriptorHandleForHeapStart();
 	auto incrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	commandList->SetDescriptorHeaps(1, &GBufferHeapLightning);
-	commandList->SetGraphicsRootDescriptorTable(1, handle);
-	handle.ptr += incrementSize;
 	commandList->SetGraphicsRootDescriptorTable(2, handle);
 	handle.ptr += incrementSize;
 	commandList->SetGraphicsRootDescriptorTable(3, handle);
+	handle.ptr += incrementSize;
+	commandList->SetGraphicsRootDescriptorTable(4, handle);
 
 	commandList->DrawInstanced(6, 1, 0, 0);
 

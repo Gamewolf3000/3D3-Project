@@ -62,7 +62,8 @@ void ConstantBufferHandler::CreateHeap(ConstantBufferType bufferType)
 	constanstBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
 	constanstBufferDesc.Width = ((constantBufferSizes[bufferType] + 255) & ~255) * maximumNumberOfBuffersBoundAtOnce;
-
+	if (bufferType == PIXEL_SHADER_LIGHT_DATA)
+		constanstBufferDesc.Width += sizeof(int) * 4;
 	ID3D12Resource* resourcePtr;
 	hr = devicePtr->CreateCommittedResource(&constantHeapProperties,
 		D3D12_HEAP_FLAG_NONE,
@@ -139,6 +140,7 @@ ConstantBufferHandler::ConstantBufferHandler(ConstantBufferSizes sizes, UINT16 m
 	CreateHeap(ConstantBufferType::VERTEX_SHADER_PER_FRAME_DATA);
 	CreateHeap(ConstantBufferType::PIXEL_SHADER_LIGHT_DATA);
 	CreateHeap(ConstantBufferType::COMPUTE_LIGHT_DATA);
+	CreateHeap(ConstantBufferType::COMPUTE_CAMERA_POS);
 
 }
 

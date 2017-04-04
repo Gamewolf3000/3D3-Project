@@ -49,8 +49,11 @@ void * LightHandler::GatherLightJobs()
 				activeLights++;
 		}
 		size_t size = sizeof(PointLight);
-		returnData = new char[activeLights * size];
+		returnData = new char[activeLights * size + sizeof(int)*4];
 		size_t offset = 0;
+		int nrOfLights[4] = { activeLights, 0, 0, 0 };
+		memcpy((char*)(returnData)+offset, &nrOfLights, sizeof(int) * 4);
+		offset += sizeof(int) * 4;
 		for (auto &data : pointLightMap)
 		{
 			if (data.second->active)
@@ -64,4 +67,15 @@ void * LightHandler::GatherLightJobs()
 
 
 	return returnData;
+}
+
+LightHandler::UINT LightHandler::GetNrOfActiveLights()
+{
+	UINT activeLights = 0;
+	for (auto &data : pointLightMap)
+	{
+		if (data.second->active)
+			activeLights++;
+	}
+	return activeLights;
 }

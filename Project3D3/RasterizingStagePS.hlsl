@@ -12,6 +12,7 @@ sampler samplerState : register(s0);
 struct vertexData
 {
     float4 pos : SV_POSITION;
+    float4 wPos : WORLDPOS;
     float4 normal : NORMAL;
     float2 uv : TEXCOORDS;
 };
@@ -21,6 +22,7 @@ PSOutput main(in vertexData data) : SV_Target
     PSOutput outPut;
     outPut.colour = float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f);
     outPut.normal = data.normal;
-    outPut.worldPos = data.pos;
+    data.wPos /= data.wPos.w;
+    outPut.worldPos = data.wPos;
     return outPut;
 }

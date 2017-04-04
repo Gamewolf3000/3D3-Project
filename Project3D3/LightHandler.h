@@ -17,7 +17,7 @@ public:
 
 private:
 	typedef signed char INT8;
-
+	typedef unsigned int UINT;
 	
 	struct PointLightEntity
 	{
@@ -38,6 +38,7 @@ public:
 	void AddLight(INT8 entityID, float colour[4], float position[4], float range);
 	void ToggleLightActive(INT8 entityID, bool active);
 	void* GatherLightJobs();
+	UINT GetNrOfActiveLights();
 
 	
 

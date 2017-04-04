@@ -84,7 +84,6 @@ private:
 	LightHandler* lightHandler;
 	UINT8 constantBufferID;
 	UINT8 vpID;
-	UINT8 lightID;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
 	Float3D camPos;
@@ -157,6 +156,10 @@ public:
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
 	UINT8 computePipelineID = -1;
+	UINT8 viewProjID = 127;
+	UINT8 camPosID = 126;
+	UINT8 lightID = 125;
+	
 	
 	ConstantBufferHandler *constantBufferHandler;
 
