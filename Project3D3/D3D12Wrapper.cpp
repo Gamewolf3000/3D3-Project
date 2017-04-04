@@ -81,14 +81,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	commandList->RSSetViewports(1, &vp);
 	commandList->RSSetScissorRects(1, &scissorRect);
 
-	//Indicate that the back buffer will be used as render target.
-	SetResourceTransitionBarrier(commandList,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_PRESENT,		//state before
-		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
-	);
-
-	ClearBuffer();
 
 	pipelineHandler->SetPipelineState(meshPipelineID, commandList);
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
@@ -131,6 +123,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	{
 		//Handle the job
 	}
+
+	SetupMeshRendering();
 
 	D3D12_RANGE range = { 0, 0 };
 	UINT vertexOffset = 0;
@@ -215,16 +209,16 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		}
 	}
 
-	commandList->DrawInstanced(6, 1, 0, 0);
-
 	SetResourceTransitionBarrier(commandList,
 		renderTargets[frameIndex],
 		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
 
-	//DispatchComputeShader();
+	FinishMeshRendering();
 
+	LightPass();
+	
 	commandList->Close();
 
 	Present();
@@ -645,16 +639,26 @@ void D3D12Wrapper::InitializeDeferredRendering()
 
 	/*Rendering Resources*/
 
-	//Create descriptor heap for render target views.
-	D3D12_DESCRIPTOR_HEAP_DESC dhd = {};
-	dhd.NumDescriptors = 3;
-	dhd.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	/*Texture heap (Lightning)*/
+	D3D12_DESCRIPTOR_HEAP_DESC textureDesc = {};
+	textureDesc.NumDescriptors = 3; // maximum number of textures, bad things will probably happen if we have more
+	textureDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	textureDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
-	HRESULT hr = device->CreateDescriptorHeap(&dhd, IID_PPV_ARGS(&GBufferHeap));
+	HRESULT hr = device->CreateDescriptorHeap(&textureDesc, IID_PPV_ARGS(&GBufferHeapLightning));
 
-	//Create resources for the render targets.
-	renderTargetDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	D3D12_CPU_DESCRIPTOR_HANDLE cdh = GBufferHeap->GetCPUDescriptorHandleForHeapStart();
+	/*Render target heap (Rendering)*/
+	textureDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	textureDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+	hr = device->CreateDescriptorHeap(&textureDesc, IID_PPV_ARGS(&GBufferHeapRendering));
+
+	D3D12_HEAP_PROPERTIES hProperties;
+	hProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+	hProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	hProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	hProperties.CreationNodeMask = 0;
+	hProperties.VisibleNodeMask = 0;
 
 	D3D12_RESOURCE_DESC rDesc;
 
@@ -670,32 +674,58 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	rDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
 	rDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
+	D3D12_SHADER_RESOURCE_VIEW_DESC sRVDesc;
+	sRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	sRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	sRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	sRVDesc.Texture2D.MipLevels = 1;
+	sRVDesc.Texture2D.MostDetailedMip = 0;
+	sRVDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	sRVDesc.Texture2D.PlaneSlice = 0;
+
+
 	D3D12_CLEAR_VALUE clear;
 	clear.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	clear.Color[0] = 0.0f;
 	clear.Color[1] = 0.0f;
-	clear.Color[2] = 0.0f;
+	clear.Color[2] = 1.0f;
 	clear.Color[3] = 1.0f;
+	
+	LPCWSTR names[3] = { L"GBuffer: Normal", L"GBuffer: Colour", L"GBuffer: Pos" };
 
-	//One RTV for each GBuffer.
-	for (UINT n = 0; n < 3; n++)
+	auto rtvHandle = GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart();
+	auto rtvIncrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	auto shaderViewHandle = GBufferHeapLightning->GetCPUDescriptorHandleForHeapStart();
+	auto shaderViewIncrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	for (int i = 0; i < 3; i++)
 	{
-		hr = device->CreateReservedResource(&rDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &clear, IID_PPV_ARGS(&GBuffers[n]));
-		device->CreateRenderTargetView(GBuffers[n], nullptr, cdh);
-		cdh.ptr += renderTargetDescriptorSize;
+		hr = device->CreateCommittedResource(&hProperties,
+			D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
+			&rDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			&clear,
+			IID_PPV_ARGS(&GBuffers[i]));
+		GBuffers[i]->SetName(names[i]);
+
+		device->CreateShaderResourceView(GBuffers[i], &sRVDesc, shaderViewHandle);
+		device->CreateRenderTargetView(GBuffers[i], nullptr, rtvHandle);
+
+		shaderViewHandle.ptr += shaderViewIncrementSize;
+		rtvHandle.ptr += rtvIncrementSize;
+		
 	}
 
-
-
-
+	/*Create upload heap, make it a shader resource?*/
 
 	/*Light-Pass*/
-
+	
 	layoutData.clear();
 
-	CBV.type = ResourceType::CBV;
+	/*CBV.type = ResourceType::CBV;
 	rootData[1].type.push_back(CBV);
 	rootData[1].visibility.push_back(PIXEL);
+	Fucking check what the fuck is going on*/
 
 	SRV.shaderRegister = 0;
 	SRV.type = ResourceType::SRV;
@@ -713,12 +743,96 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	rootData[1].visibility.push_back(PIXEL);
 
 	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[0], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, true);
+	
+	/*Set the Render targets as shared resources*/
+	/*Creating a texture heap for the light pass*/
+	
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC rvDesc = {};
+	rvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	rvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	rvDesc.Texture2D.MipLevels = 1;
+	rvDesc.Texture2D.MostDetailedMip = 0;
+	rvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 
 }
 
-void D3D12Wrapper::SetupDeferredRendering()
+void D3D12Wrapper::SetupMeshRendering()
 {
+	pipelineHandler->SetPipelineState(deferredPipelineID[0], commandList);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_NORMAL],
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_COLOUR],
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_POS],
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+	commandList->OMSetRenderTargets(3, &GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
+	commandList->ClearRenderTargetView(GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), clearColor, 0, nullptr);
+	commandList->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+}
+
+void D3D12Wrapper::FinishMeshRendering()
+{
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_NORMAL],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE		//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_COLOUR],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_POS],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	//state after
+	);
+
+}
+
+void D3D12Wrapper::LightPass()
+{
+	//Indicate that the back buffer will be used as render target.
+	SetResourceTransitionBarrier(commandList,
+		renderTargets[frameIndex],
+		D3D12_RESOURCE_STATE_PRESENT,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+
+	ClearBuffer();
+
+
+
+	pipelineHandler->SetPipelineState(deferredPipelineID[1], commandList);
+	auto handle = GBufferHeapLightning->GetGPUDescriptorHandleForHeapStart();
+	auto incrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	commandList->SetDescriptorHeaps(1, &GBufferHeapLightning);
+	commandList->SetGraphicsRootDescriptorTable(1, handle);
+	handle.ptr += incrementSize;
+	commandList->SetGraphicsRootDescriptorTable(2, handle);
+	handle.ptr += incrementSize;
+	commandList->SetGraphicsRootDescriptorTable(3, handle);
+
+	commandList->DrawInstanced(6, 1, 0, 0);
+
+	SetResourceTransitionBarrier(commandList,
+		renderTargets[frameIndex],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
+		D3D12_RESOURCE_STATE_PRESENT		//state after
+	);
 }
 
 void D3D12Wrapper::CreatePipelines()
@@ -951,8 +1065,8 @@ int D3D12Wrapper::Shutdown()
 	for(int i = 0; i < 3; i++)
 		SafeRelease(&GBuffers[i]);
 
-	SafeRelease(&GBufferHeap);
-	
+	SafeRelease(&GBufferHeapRendering);
+	SafeRelease(&GBufferHeapLightning);
 	
 	/*SafeRelease(&samplerHeap);*/
 	//SafeRelease(&textureHeap);

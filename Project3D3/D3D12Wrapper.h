@@ -132,8 +132,9 @@ private:
 
 	/*Variables*/
 	UINT8 deferredPipelineID[2] = { (UINT8)-1, (UINT8)-1 };
-	ID3D12DescriptorHeap* GBufferHeap;
-	ID3D12Resource *GBuffers[3];
+	ID3D12DescriptorHeap* GBufferHeapRendering;
+	ID3D12DescriptorHeap* GBufferHeapLightning;
+	ID3D12Resource* GBuffers[3] = { nullptr, nullptr, nullptr };
 	enum GBuffers {
 		GBUFFER_NORMAL,
 		GBUFFER_COLOUR,
@@ -142,7 +143,8 @@ private:
 
 	/*Functions*/
 	void InitializeDeferredRendering();
-	void SetupDeferredRendering();
+	void SetupMeshRendering();
+	void FinishMeshRendering();
 	void LightPass();
 
 
