@@ -49,7 +49,7 @@ float4 main(in float4 screenPos : SV_Position) : SV_TARGET
 
 
         totalColour.xyz += (diffuse + specular) * attenuation;
-        return float4(NdotL, 0.0f, 0.0f, 1.0f);
+        //return float4(NdotL, 0.0f, 0.0f, 1.0f);
 
     }
     return float4(totalColour.xyz, 1.0f);
