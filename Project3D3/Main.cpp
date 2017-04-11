@@ -14,7 +14,7 @@ unsigned int stefanRotValue = 0;
 void CreateEntities(EntityHandler& handler);
 std::vector<Entity*> entities;
 
-Float3D cameraPos(0, -3, -1);
+Float3D cameraPos(0, 0, 0);
 float cameraRot = 0;
 void Update(D3D12Wrapper& graphics, EntityHandler & handler);
 

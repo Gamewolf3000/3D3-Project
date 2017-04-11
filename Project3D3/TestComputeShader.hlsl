@@ -23,6 +23,9 @@ cbuffer FrameData : register(b0)
 
 	unsigned int windowWidth;
 	unsigned int windowHeight;
+
+	float4x4 projMat;
+	float4x4 viewMat;
 }
 
 #define NROFLIGHTS 5
@@ -114,16 +117,65 @@ float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint)
 
 float3 WorldPosFromDepth(float depth, float2 TexCoord) {
 	float z = depth;// *2.0 - 1.0;
+	float n = 0.1f;
+	float f = 100.0f;
+	float EZ = (n * f) / (f - z * (f - n));
+	float LZ  = z / (f - z * (f - n));
+	z = LZ;
+	//return z.xxx;
 
-	float4 clipSpacePosition = float4(TexCoord * 2.0 - 1.0, z, 1.0);
+	//z = 1.00100100f / (z - 1.0f);
+	//return z.xxx;
+
+	//float FarClipDistance = 100.0f;
+	//float NearClipDistance = 0.1f;
+	//float ProjectionA = FarClipDistance / (FarClipDistance - NearClipDistance);
+	//float ProjectionB = (-FarClipDistance * NearClipDistance) / (FarClipDistance - NearClipDistance);
+	//float linearDepth = ProjectionB / (depth - ProjectionA);
+
+	//z = linearDepth;
+
+	//return (LZ - linearDepth).xxx;
+
+	float4 clipSpacePosition = float4(TexCoord * 2.0f - 1.0f, z, 1.0f);
 	float4 viewSpacePosition = mul(clipSpacePosition, revProjMat);
 
 	// Perspective division
-	viewSpacePosition /= viewSpacePosition.w;
+	viewSpacePosition.xyz /= viewSpacePosition.w;
 
 	float4 worldSpacePosition = mul(viewSpacePosition, revViewMat);
 
 	return worldSpacePosition.xyz;
+}
+//
+float3 ViewPosFromDepth(float depth, float2 TexCoord) {
+	float z = depth;// *2.0 - 1.0;
+	float n = 0.1f;
+	float f = 100.0f;
+	float EZ = (n * f) / (f - z * (f - n));
+	float LZ = z / (f - z * (f - n));
+	z = LZ;
+
+	float4 clipSpacePosition = float4(TexCoord * 2.0f - 1.0f, z, 1.0f);
+	float4 viewSpacePosition = mul(clipSpacePosition, revProjMat);
+
+	// Perspective division
+	viewSpacePosition.xyz /= viewSpacePosition.w;
+
+
+	float zView = projMat[3][2] / (depth - projMat[2][2]);
+
+	float4 ray;
+	float4 something = float4(TexCoord * 2.0f - 1.0f, 0.0f, 1.0f);
+
+	ray = mul(something, revProjMat);
+	ray /= ray.w;
+	ray /= ray.z;
+
+	return (zView * ray).xyz;
+
+
+	return viewSpacePosition.xyz;
 }
 
 [numthreads(16, 16, 1)] // matches 1280x720 with the dispatch call on the cpu
@@ -135,10 +187,18 @@ void main( uint3 threadID : SV_DispatchThreadID )
 
 	float3 posW = WorldPosFromDepth(depthValue, xyCoords);
 
+	float3 posV = ViewPosFromDepth(depthValue, xyCoords);
+
+	float3 origin = mul(camPos, viewMat);
+
+	float distance = length(posV - origin);
+
+	map[threadID.xy] = distance;
+
 	////posW /= posW.w;
 
-	float3 origin = camPos;
-	float distance = length(posW.xyz - origin);
+	//float3 origin = camPos;
+	//float distance = length(posW.xyz - origin);
 	//float3 direction = normalize(posW.xyz - origin);
 
 	//if(posW.x < 0.001f && posW.x > -0.001f)
@@ -162,7 +222,20 @@ void main( uint3 threadID : SV_DispatchThreadID )
 	//else
 	//	map[threadID.xy] = depthValue;
 
-	map[threadID.xy] = distance;
+	//map[threadID.xy] = posW.x;
+
+	//if (revViewMat[0][0] == 1.0f)
+	//	map[threadID.xy] = 1.0f;
+	//else
+	//	map[threadID.xy] = 0.0f;
+
+	//if (depthValue > 1 || depthValue < 0)
+	//	map[threadID.xy] = 1.0f;
+	//else
+	//	map[threadID.xy] = 0.0f;
+	//origin = mul(camPos, viewMat);
+	//distance = length(origin - ViewPosFromDepth(depthValue, xyCoords));
+	//map[threadID.xy] = distance;
 
 	//if(distance < 1)
 		//map[threadID.xy] = distance / 10;

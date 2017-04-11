@@ -119,6 +119,7 @@ private:
 	void DisplayFps();
 	void DispatchComputeShader();
 	void CopyDepthBuffer();
+	void RenderPrePass(EntityHandler* handler);
 
 	void WaitForGPU();
 
@@ -140,6 +141,7 @@ public:
 
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
+	UINT8 prePassPipelineID = -1;
 	UINT8 computePipelineID = -1;
 	ConstantBufferHandler *constantBufferHandler;
 
