@@ -10,7 +10,5 @@ struct vertexData
 
 float main(vertexData data) : SV_Depth
 {
-	float2 xyCoords = data.pos.xy / float2(1280,720);
-	return xyCoords.x;
 	return data.writeValue;
 }
