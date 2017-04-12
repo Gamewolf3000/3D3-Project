@@ -35,7 +35,6 @@ vertexData main(VSIn input, uint index : SV_VertexID)
     outPut.normal = normalize(float4(outPut.normal.xyz, 0.0f));
     //outPut.normal = float4(input.normal, 0.0f);
     outPut.wPos = mul(float4(input.pos, 1.0f), worldMatrix);
-    outPut.wPos /= outPut.wPos.w;
     outPut.pos = mul(float4(input.pos, 1.0f), mul(worldMatrix, mul(view, projection)));
     //outPut.pos /= outPut.pos.w;
 

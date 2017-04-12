@@ -33,14 +33,32 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
 	camPos = Float3D(0.0f, 0.0f, -1.0f);
 
-	float lightColour[4] = { 0.25f, 0.5f, 0.0f, 1.0f };
-	float position[4] = { 0.0f, 0.0f, -1.0f, 1.0f };
-	lightHandler->AddLight(0, lightColour, position, 20.0f);
+	float lightColour[4] = { 2.0f, 0.0f, 0.0f, 1.0f };
+	float position[4] = { 2.0f, .0f, .0f, 1.0f };
+	lightHandler->AddLight(0, lightColour, position, 2.5f);
 	
-	lightColour[2] = 0.75f;
-	position[2] = 1.0f;
-	lightHandler->AddLight(1, lightColour, position, 20.0f);
+	lightColour[0] = 0.2f;
+	lightColour[1] = 0.2f;
+	lightColour[2] = 0.2f;
+	position[0] = -2.0f;
+	
+	lightHandler->AddLight(1, lightColour, position, 2.5f);
 
+	lightColour[0] = 0.2f;
+	lightColour[1] = 0.5f;
+	lightColour[2] = 0.3f;
+	position[0] = 0.0f;
+	position[2] = 2.0f;
+
+	lightHandler->AddLight(2, lightColour, position, 2.5f);
+
+	lightColour[0] = 0.8f;
+	lightColour[1] = 0.4f;
+	lightColour[2] = 0.1f;
+	position[0] = 0.0f;
+	position[2] = -2.0f;
+
+	lightHandler->AddLight(3, lightColour, position, 2.5f);
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
 	SetupComputeShader();
 
@@ -393,7 +411,7 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	DXGI_SWAP_CHAIN_DESC1 scDesc = {};
 	scDesc.Width = 0;
 	scDesc.Height = 0;
-	scDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	scDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	scDesc.Stereo = FALSE;
 	scDesc.SampleDesc.Count = 1;
 	scDesc.SampleDesc.Quality = 0;
@@ -678,14 +696,14 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	rDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 	rDesc.DepthOrArraySize = 1;
 	rDesc.MipLevels = 1;
-	rDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	rDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	rDesc.SampleDesc.Count = 1;
 	rDesc.SampleDesc.Quality = 0;
 	rDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
 	rDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC sRVDesc;
-	sRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	sRVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	sRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	sRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	sRVDesc.Texture2D.MipLevels = 1;
@@ -695,7 +713,7 @@ void D3D12Wrapper::InitializeDeferredRendering()
 
 
 	D3D12_CLEAR_VALUE clear;
-	clear.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	clear.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	clear.Color[0] = 0.0f;
 	clear.Color[1] = 0.0f;
 	clear.Color[2] = 1.0f;
@@ -764,7 +782,7 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC rvDesc = {};
-	rvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	rvDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	rvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	rvDesc.Texture2D.MipLevels = 1;
 	rvDesc.Texture2D.MostDetailedMip = 0;
@@ -793,6 +811,7 @@ void D3D12Wrapper::SetupMeshRendering()
 	);
 	commandList->OMSetRenderTargets(3, &GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
 	commandList->ClearRenderTargetView(GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), clearColor, 0, nullptr);
+
 	commandList->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 }

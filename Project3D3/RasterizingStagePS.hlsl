@@ -22,7 +22,6 @@ PSOutput main(in vertexData data) : SV_Target
     PSOutput outPut;
     outPut.colour = float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f);
     outPut.normal = data.normal;
-    data.wPos /= data.wPos.w;
     outPut.worldPos = data.wPos;
     return outPut;
 }
