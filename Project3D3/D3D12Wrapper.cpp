@@ -31,6 +31,8 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
 	camPos = Float3D(0, 0, -1);
 
+	MatrixToFloat4x4(computeCamera.projectionMatrix, MatrixProjectionLH(JEX_PI / 2, 1280.0 / 720.0, 0.1f, 100.0f));
+
 	//Matrix test = MatrixProjectionLH(JEX_PI / 2, 1280.0 / 720.0, 0.1f, 100.0f);
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
@@ -59,7 +61,11 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 	const std::vector<Entity*> &entities = handler->GetEntityVector();
 	
-	RenderPrePass(handler);
+	if (renderPrePass == true)
+	{
+		RenderPrePass(handler);
+		//renderPrePass = false;
+	}
 
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
@@ -137,51 +143,51 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	//	//Handle the job
 	//}
 
-	int nrOfTriangles = 0;
+	//int nrOfTriangles = 0;
 	UINT vertexOffset = 0;
 	D3D12_RANGE range = { 0, 0 };
-	void* dataPtr;
-	for (int i = 0; i < entities.size(); i++)
-	{
-		if (entities[i]->render)
-		{
+	//void* dataPtr;
+	//for (int i = 0; i < entities.size(); i++)
+	//{
+	//	if (entities[i]->render)
+	//	{
 
-			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
+	//		RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
 
-			if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
-			{
-				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
-				// but for now just a breakpoint, thats an easy solution
-				int a = 0;
-				a++;
-			}
+	//		if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
+	//		{
+	//			// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
+	//			// but for now just a breakpoint, thats an easy solution
+	//			int a = 0;
+	//			a++;
+	//		}
 
-			void* bufferData = rData.data;
-			computeShaderResourceMeshes->Map(0, &range, &dataPtr);
-			memcpy((char*)dataPtr + vertexOffset, bufferData, rData.size);
-			computeShaderResourceMeshes->Unmap(0, nullptr);
+	//		void* bufferData = rData.data;
+	//		computeShaderResourceMeshes->Map(0, &range, &dataPtr);
+	//		memcpy((char*)dataPtr + vertexOffset, bufferData, rData.size);
+	//		computeShaderResourceMeshes->Unmap(0, nullptr);
 
-			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
-			nrOfTriangles += rData.nrOfTriangles;
-		}
-	}
-	void* dataPtr2;
-	ViewProjectionStruct tempVP;
-	
-	MatrixToFloat4x4(tempVP.projectionMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)))));
-	MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)))));
-	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixViewLH(VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z, 1), VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z + 1.0f, 1.0f), VecCreate(0.0f, 1.0f, 0.0f, 0.0f)))));
+	//		vertexOffset += rData.nrOfIndices * VERTEXSIZE;
+	//		nrOfTriangles += rData.nrOfTriangles;
+	//	}
+	//}
+	//void* dataPtr2;
+	//ViewProjectionStruct tempVP;
+	//
+	//MatrixToFloat4x4(tempVP.projectionMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)))));
+	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)))));
+	////MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixViewLH(VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z, 1), VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z + 1.0f, 1.0f), VecCreate(0.0f, 1.0f, 0.0f, 0.0f)))));
 
-	computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
-	memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpStruct->projectionMatrix, sizeof(Float4x4));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float4x4), &vpStruct->viewMatrix, sizeof(Float4x4));
-	computeShaderResourceFrameData->Unmap(0, nullptr);
+	//computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
+	//memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpStruct->projectionMatrix, sizeof(Float4x4));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float4x4), &vpStruct->viewMatrix, sizeof(Float4x4));
+	//computeShaderResourceFrameData->Unmap(0, nullptr);
 
 	vertexOffset = 0;
 	UINT indexOffset = 0;
@@ -269,8 +275,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
 
-	DispatchComputeShader();
-
 	commandList->Close();
 
 	Present();
@@ -282,6 +286,7 @@ void D3D12Wrapper::MoveCamera(Float3D position, float rotation)
 	Vec lookDir = VecCreate(0, 0, 1, 0);
 	Vec positionVec = VecCreate(position.x, position.y, position.z, 1.0f);
 	camPos = position;
+	this->rotation = rotation;
 
 	Matrix rotMatrix = MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), rotation);
 
@@ -563,6 +568,7 @@ void D3D12Wrapper::SetupComputeShader()
 	SRV.type = ResourceType::SRV;
 	SRV.shaderRegister = 0;
 	rsData.type.push_back(SRV);
+
 	SRV.type = ResourceType::SRV;
 	SRV.shaderRegister = 1;
 	SRV.rType = SRV_ROOT;
@@ -573,6 +579,7 @@ void D3D12Wrapper::SetupComputeShader()
 	CBV.shaderRegister = 0;
 	CBV.rType = CBV_ROOT;
 	rsData.type.push_back(CBV);
+
 	CBV.type = ResourceType::CBV;
 	CBV.shaderRegister = 1;
 	CBV.rType = CBV_ROOT;
@@ -674,7 +681,7 @@ void D3D12Wrapper::SetupComputeShader()
 	device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2),
+		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(ComputeShaderStruct)),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&computeShaderResourceFrameData)
@@ -961,19 +968,44 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 	}
 	void* dataPtr2;
 	ViewProjectionStruct tempVP;
+	ComputeShaderStruct uploadData = {};
 
-	MatrixToFloat4x4(tempVP.projectionMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)))));
-	MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)))));
+	float temptest = DirectX::XMMatrixDeterminant(Float4x4ToMatrix(vpStruct->projectionMatrix)).m128_f32[0];
+	DirectX::XMMATRIX testInvert = MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)));
+
+	MatrixToFloat4x4(uploadData.revProjMat, MatrixTranspose(MatrixInvert(Float4x4ToMatrix(computeCamera.projectionMatrix))));
+	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)))));
+	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(MatrixIdentity))));
+
+	Matrix rotMatrix = MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), rotation);
+
+	Vec lookDir = VecCreate(0.0f, 0.0f, 1.0f, 0.0f);
+	lookDir = VecMultMatrix3D(lookDir, rotMatrix);
+
+	Vec positionVec = VecCreate(camPos.x, camPos.y, camPos.z, 1.0f);
+	MatrixToFloat4x4(uploadData.revViewMat, MatrixTranspose(MatrixInvert(MatrixViewLH(positionVec, VecAdd(lookDir, positionVec), VecCreate(0.0f, 1.0f, 0.0f, 0.0f)))));
+
+	Float4x4 vpToSendUp;
+	memcpy(&uploadData.viewMat, &vpStruct->viewMatrix, sizeof(Float4x4));
+
+	uploadData.nrOfTriangles = nrOfTriangles;
+	uploadData.camPos = camPos;
+	uploadData.windowWidth = windowWidth;
+	uploadData.windowHeight = windowHeight;
+	uploadData.pad;
 
 	computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
-	memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpStruct->projectionMatrix, sizeof(Float4x4));
-	memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float4x4), &vpStruct->viewMatrix, sizeof(Float4x4));
+	memcpy(dataPtr2, &uploadData, sizeof(uploadData));
+	//memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpToSendUp, sizeof(Float2D)); // padding
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float2D), &vpToSendUp, sizeof(Float4x4));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpStruct->projectionMatrix, sizeof(Float4x4));
+	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float4x4), &vpStruct->viewMatrix, sizeof(Float4x4));
 	computeShaderResourceFrameData->Unmap(0, nullptr);
 
 	vertexOffset = 0;
@@ -1036,6 +1068,8 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
+
+	DispatchComputeShader();
 
 	commandList->Close();
 

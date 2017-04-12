@@ -47,6 +47,22 @@ struct ViewProjectionStruct
 	Float4x4 viewMatrix;
 };
 
+struct ComputeShaderStruct
+{
+	Float4x4 revProjMat;
+	Float4x4 revViewMat;
+
+	int nrOfTriangles;
+	Float3D camPos;
+
+	unsigned int windowWidth;
+	unsigned int windowHeight;
+
+	Float2D pad;
+
+	Float4x4 viewMat;
+};
+
 class D3D12Wrapper
 {
 private:
@@ -94,7 +110,10 @@ private:
 	UINT8 lightID;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
+	ViewProjectionStruct computeCamera;
+
 	Float3D camPos;
+	float rotation;
 
 	D3D12_VIEWPORT vp;
 	D3D12_RECT scissorRect;
@@ -143,6 +162,7 @@ public:
 	UINT8 meshPipelineID = -1;
 	UINT8 prePassPipelineID = -1;
 	UINT8 computePipelineID = -1;
+	bool renderPrePass = true;
 	ConstantBufferHandler *constantBufferHandler;
 
 	void MoveCamera(Float3D position, float rotation);

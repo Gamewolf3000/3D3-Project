@@ -24,7 +24,9 @@ cbuffer FrameData : register(b0)
 	unsigned int windowWidth;
 	unsigned int windowHeight;
 
-	float4x4 projMat;
+	float2 pad;
+
+	//float4x4 projMat;
 	float4x4 viewMat;
 }
 
@@ -115,27 +117,71 @@ float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint)
 	return t;
 }
 
+//float3 WorldPosFromDepth(float depth, float2 TexCoord) {
+//	float z = depth;// *2.0 - 1.0;
+//	float n = 0.1f;
+//	float f = 100.0f;
+//	float EZ = (n * f) / (f - z * (f - n));
+//	float LZ  = z / (f - z * (f - n));
+//	z = LZ;
+//	//return z.xxx;
+//
+//	//z = 1.00100100f / (z - 1.0f);
+//	//return z.xxx;
+//
+//	//float FarClipDistance = 100.0f;
+//	//float NearClipDistance = 0.1f;
+//	//float ProjectionA = FarClipDistance / (FarClipDistance - NearClipDistance);
+//	//float ProjectionB = (-FarClipDistance * NearClipDistance) / (FarClipDistance - NearClipDistance);
+//	//float linearDepth = ProjectionB / (depth - ProjectionA);
+//
+//	//z = linearDepth;
+//
+//	//return (LZ - linearDepth).xxx;
+//
+//	float4 clipSpacePosition = float4(TexCoord * 2.0f - 1.0f, z, 1.0f);
+//	float4 viewSpacePosition = mul(clipSpacePosition, revProjMat);
+//
+//	// Perspective division
+//	viewSpacePosition.xyz /= viewSpacePosition.w;
+//
+//	float4 worldSpacePosition = mul(viewSpacePosition, revViewMat);
+//
+//	return worldSpacePosition.xyz;
+//}
+//
+//float3 ViewPosFromDepth(float depth, float2 TexCoord) {
+//	float z = depth;// *2.0 - 1.0;
+//	float n = 0.1f;
+//	float f = 100.0f;
+//	float EZ = (n * f) / (f - z * (f - n));
+//	float LZ = z / (f - z * (f - n));
+//	z = LZ;
+//
+//	float4 clipSpacePosition = float4(TexCoord * 2.0f - 1.0f, z, 1.0f);
+//	float4 viewSpacePosition = mul(clipSpacePosition, revProjMat);
+//
+//	// Perspective division
+//	viewSpacePosition.xyz /= viewSpacePosition.w;
+//
+//
+//	float zView = projMat[3][2] / (depth - projMat[2][2]);
+//
+//	float4 ray;
+//	float4 something = float4(TexCoord * 2.0f - 1.0f, 0.0f, 1.0f);
+//
+//	ray = mul(something, revProjMat);
+//	ray /= ray.w;
+//	ray /= ray.z;
+//
+//	return (zView * ray).xyz;
+//
+//
+//	return viewSpacePosition.xyz;
+//}
+
 float3 WorldPosFromDepth(float depth, float2 TexCoord) {
 	float z = depth;// *2.0 - 1.0;
-	float n = 0.1f;
-	float f = 100.0f;
-	float EZ = (n * f) / (f - z * (f - n));
-	float LZ  = z / (f - z * (f - n));
-	z = LZ;
-	//return z.xxx;
-
-	//z = 1.00100100f / (z - 1.0f);
-	//return z.xxx;
-
-	//float FarClipDistance = 100.0f;
-	//float NearClipDistance = 0.1f;
-	//float ProjectionA = FarClipDistance / (FarClipDistance - NearClipDistance);
-	//float ProjectionB = (-FarClipDistance * NearClipDistance) / (FarClipDistance - NearClipDistance);
-	//float linearDepth = ProjectionB / (depth - ProjectionA);
-
-	//z = linearDepth;
-
-	//return (LZ - linearDepth).xxx;
 
 	float4 clipSpacePosition = float4(TexCoord * 2.0f - 1.0f, z, 1.0f);
 	float4 viewSpacePosition = mul(clipSpacePosition, revProjMat);
@@ -143,79 +189,45 @@ float3 WorldPosFromDepth(float depth, float2 TexCoord) {
 	// Perspective division
 	viewSpacePosition.xyz /= viewSpacePosition.w;
 
-	float4 worldSpacePosition = mul(viewSpacePosition, revViewMat);
+	//return viewSpacePosition.xyz;
+	
+	//viewSpacePosition.w = 1;
+
+	float4 worldSpacePosition = mul(float4(viewSpacePosition.xyz, 1), revViewMat);
 
 	return worldSpacePosition.xyz;
-}
-//
-float3 ViewPosFromDepth(float depth, float2 TexCoord) {
-	float z = depth;// *2.0 - 1.0;
-	float n = 0.1f;
-	float f = 100.0f;
-	float EZ = (n * f) / (f - z * (f - n));
-	float LZ = z / (f - z * (f - n));
-	z = LZ;
-
-	float4 clipSpacePosition = float4(TexCoord * 2.0f - 1.0f, z, 1.0f);
-	float4 viewSpacePosition = mul(clipSpacePosition, revProjMat);
-
-	// Perspective division
-	viewSpacePosition.xyz /= viewSpacePosition.w;
-
-
-	float zView = projMat[3][2] / (depth - projMat[2][2]);
-
-	float4 ray;
-	float4 something = float4(TexCoord * 2.0f - 1.0f, 0.0f, 1.0f);
-
-	ray = mul(something, revProjMat);
-	ray /= ray.w;
-	ray /= ray.z;
-
-	return (zView * ray).xyz;
-
-
-	return viewSpacePosition.xyz;
 }
 
 [numthreads(16, 16, 1)] // matches 1280x720 with the dispatch call on the cpu
 void main( uint3 threadID : SV_DispatchThreadID )
 {
 	float2 xyCoords = threadID.xy / float2(windowWidth, windowHeight);
-	//xyCoords.y *= -1.0f;
+	xyCoords.y = 1 - xyCoords.y;
 	float depthValue = depth[threadID.xy];
+	//map[threadID.xy] = depthValue;
+	//return;
 
 	float3 posW = WorldPosFromDepth(depthValue, xyCoords);
 
-	float3 posV = ViewPosFromDepth(depthValue, xyCoords);
+	//float3 posV = ViewPosFromDepth(depthValue, xyCoords);
 
-	float3 origin = mul(camPos, viewMat);
 
-	float distance = length(posV - origin);
+	float3 origin = float3(1.5f, 0.0f, 0.0f);
+	float distance = length(posW.xyz - origin);
+	float3 direction = normalize(posW.xyz - origin);
 
-	map[threadID.xy] = distance;
+	map[threadID.xy] = 1.0f;
 
-	////posW /= posW.w;
+	for (int i = 0; i < 1; i++)
+	{
+		//float temp = rayVsMeshTriangle(origin, direction, i * 3);
+		float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 0.5);
 
-	//float3 origin = camPos;
-	//float distance = length(posW.xyz - origin);
-	//float3 direction = normalize(posW.xyz - origin);
+		if (temp < distance)
+			map[threadID.xy] = 0.2f;
+	}
 
-	//if(posW.x < 0.001f && posW.x > -0.001f)
-	//	map[threadID.xy] = 1;
-	//else
-	//	map[threadID.xy] = 0;
-
-	//map[threadID.xy] = 1;
-
-	//for (int i = 0; i < nrOfTriangles; i++)
-	//{
-	//	//float temp = rayVsMeshTriangle(origin, direction, i * 3);
-	//	float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 0.5);
-
-	//	if (temp < distance)
-	//		map[threadID.xy] = 0.2f;
-	//}
+	//map[threadID.xy] = posW.x;
 
 	//if(depthValue > 1)
 	//	map[threadID.xy] = 0.0;
@@ -224,7 +236,7 @@ void main( uint3 threadID : SV_DispatchThreadID )
 
 	//map[threadID.xy] = posW.x;
 
-	//if (revViewMat[0][0] == 1.0f)
+	//if (viewMat[1][1] == 1.0f)
 	//	map[threadID.xy] = 1.0f;
 	//else
 	//	map[threadID.xy] = 0.0f;

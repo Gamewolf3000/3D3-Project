@@ -19,7 +19,8 @@ cbuffer viewProjectionMatrixes : register(b1)
 struct vertexData
 {
 	float4 pos : SV_POSITION;
-	float writeValue : WRITE_VALUE;
+	float zValue : Z_VALUE;
+	float wValue : W_VALUE;
 };
 
 vertexData main(VSIn input, uint index : SV_VertexID)
@@ -27,7 +28,8 @@ vertexData main(VSIn input, uint index : SV_VertexID)
 	vertexData outPut;
 	outPut.pos = float4(input.pos, 1.0f);
 	outPut.pos = mul(outPut.pos, mul(worldMatrix, mul(view, projection)));
-	outPut.writeValue = outPut.pos.z / outPut.pos.w;
+	outPut.zValue = outPut.pos.z;
+	outPut.wValue = outPut.pos.w;
 
 	return outPut;
 }

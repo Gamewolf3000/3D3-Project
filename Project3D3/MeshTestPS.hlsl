@@ -33,5 +33,5 @@ float4 main(vertexData data) : SV_Target
 	//return float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f);
 
 	//return float4(1.0f, 1.0f, 1.0f, 1.0f);
-	return float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f);// *shadowMap.Sample(samplerState, xyCoords).x;
+	return float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f) * shadowMap.Sample(samplerState, xyCoords).x;
 }

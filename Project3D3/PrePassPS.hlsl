@@ -5,10 +5,14 @@ sampler samplerState : register(s0);
 struct vertexData
 {
 	float4 pos : SV_Position;
-	float writeValue : WRITE_VALUE;
+	float zValue : Z_VALUE;
+	float wValue : W_VALUE;
 };
 
 float main(vertexData data) : SV_Depth
 {
-	return data.writeValue;
+	//float2 xyCoords = data.pos.xy / float2(1280,720);
+	//return xyCoords.x;
+
+	return data.zValue / data.wValue;
 }
