@@ -28,10 +28,10 @@ float4 main(vertexData data) : SV_Target
 	//xyCoords *= 0.5f;
 
 	//return float4(xyCoords.x, 0.0f, 0.0f, 1.0f);
-	//return float4(shadowMap.Sample(samplerState, xyCoords).xyz, 1.0f);
+	return float4(shadowMap.Sample(samplerState, xyCoords).xyz, 1.0f);
 	//return float4(shadowMap.Sample(samplerState, data.uv).xyz, 1.0f);
 	//return float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f);
 
 	//return float4(1.0f, 1.0f, 1.0f, 1.0f);
-	return float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f) * shadowMap.Sample(samplerState, xyCoords).x;
+	return float4(sampleTexture.Sample(samplerState, data.uv).xyz * shadowMap.Sample(samplerState, xyCoords).x, 1.0f);
 }

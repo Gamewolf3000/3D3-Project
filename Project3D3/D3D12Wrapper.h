@@ -24,6 +24,8 @@
 
 #define NUM_SWAP_BUFFERS 2
 
+#define MAXNROFMESHES 1
+
 template<class Interface>
 inline void SafeRelease(
 	Interface **ppInterfaceToRelease)
@@ -63,6 +65,13 @@ struct ComputeShaderStruct
 	Float4x4 viewMat;
 };
 
+struct MeshRelatedData
+{
+	Float4x4 worldMatrix;
+	int nrOfTrianglesMeshHas;
+	int padding[3] = { 3, 4, 5 };
+};
+
 class D3D12Wrapper
 {
 private:
@@ -98,6 +107,7 @@ private:
 	ID3D12Resource* computeShaderResourceOutput = nullptr;
 	ID3D12Resource* computeShaderResourceInput = nullptr;
 	ID3D12Resource* computeShaderResourceMeshes = nullptr;
+	ID3D12Resource* computeShaderResourceMeshRelatedData = nullptr;
 	ID3D12Resource* computeShaderResourceFrameData = nullptr;
 	ID3D12Resource* computeShaderResourceLightData = nullptr;
 

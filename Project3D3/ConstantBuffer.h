@@ -58,6 +58,7 @@ public:
 	void UpdateBuffer(UINT8 ID, ConstantBufferType bufferType, void* newData);
 	void SetDescriptorHeap(ConstantBufferType bufferType, ID3D12GraphicsCommandList* cmdList);
 	void SetGraphicsRoot(ConstantBufferType bufferType, UINT index, UINT offset, ID3D12GraphicsCommandList* cmdList);
+	void* GetBufferData(UINT8 ID, ConstantBufferType bufferType);
 
 	ConstantBufferHandler(ConstantBufferSizes sizes = ConstantBufferSizes() , UINT16 maximumNumberOfBindings = 512, ID3D12Device* deviceRef = nullptr);
 	~ConstantBufferHandler();

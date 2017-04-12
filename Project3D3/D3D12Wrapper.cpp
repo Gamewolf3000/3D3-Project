@@ -585,10 +585,10 @@ void D3D12Wrapper::SetupComputeShader()
 	CBV.rType = CBV_ROOT;
 	rsData.type.push_back(CBV);
 
-	ResourceDescription SAMPLER;
-	SAMPLER.type = ResourceType::SAMPLER;
-	SAMPLER.shaderRegister = 0;
-	rsData.type.push_back(SAMPLER);
+	CBV.type = ResourceType::CBV;
+	CBV.shaderRegister = 2;
+	CBV.rType = CBV_ROOT;
+	rsData.type.push_back(CBV);
 
 	computePipelineID = pipelineHandler->CreateComputePipeline(rsData, "TestComputeShader.hlsl");
 
@@ -670,7 +670,7 @@ void D3D12Wrapper::SetupComputeShader()
 
 	//Creates both a resource and an implicit heap, such that the heap is big enough
 	//to contain the entire resource and the resource is mapped to the heap. 
-	device->CreateCommittedResource(
+	hr = device->CreateCommittedResource(
 		&hp,
 		D3D12_HEAP_FLAG_NONE,
 		&rd,
@@ -678,7 +678,7 @@ void D3D12Wrapper::SetupComputeShader()
 		nullptr,
 		IID_PPV_ARGS(&computeShaderResourceMeshes));
 
-	device->CreateCommittedResource(
+	hr = device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(ComputeShaderStruct)),
@@ -687,13 +687,22 @@ void D3D12Wrapper::SetupComputeShader()
 		IID_PPV_ARGS(&computeShaderResourceFrameData)
 	);
 
-	device->CreateCommittedResource(
+	hr = device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(Float4D) * 2),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&computeShaderResourceLightData)
+	);
+
+	hr = device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(MeshRelatedData) * MAXNROFMESHES),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&computeShaderResourceMeshRelatedData)
 	);
 
 }
@@ -842,8 +851,9 @@ void D3D12Wrapper::DispatchComputeShader()
 
 	commandList->SetComputeRootShaderResourceView(2, computeShaderResourceMeshes->GetGPUVirtualAddress());
 	commandList->SetComputeRootConstantBufferView(3, computeShaderResourceFrameData->GetGPUVirtualAddress());
+	commandList->SetComputeRootConstantBufferView(4, computeShaderResourceMeshRelatedData->GetGPUVirtualAddress());
 
-	commandList->Dispatch(80, 45, 1);
+	commandList->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
 
 	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 }
@@ -939,9 +949,12 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 	}
 
 	int nrOfTriangles = 0;
+	int nrOfMeshes = 0;
 	UINT vertexOffset = 0;
 	D3D12_RANGE range = { 0, 0 };
 	void* dataPtr;
+	void* otherDataPtr;
+	MeshRelatedData storageStruct;
 	for (int i = 0; i < entities.size(); i++) // send all the mesh data to the compute shader
 	{
 		if (entities[i]->render)
@@ -964,6 +977,19 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
 			nrOfTriangles += rData.nrOfTriangles;
+
+			bufferData = constantBufferHandler->GetBufferData(entities[i]->entityID, ConstantBufferHandler::ConstantBufferType::VERTEX_SHADER_PER_OBJECT_DATA);
+			storageStruct.worldMatrix = *(Float4x4*)bufferData;
+			storageStruct.nrOfTrianglesMeshHas = rData.nrOfTriangles;
+
+			if (i == 0)
+			{
+				computeShaderResourceMeshRelatedData->Map(0, &range, &otherDataPtr);
+				memcpy((char*)otherDataPtr + (sizeof(MeshRelatedData)) * nrOfMeshes, &storageStruct, sizeof(MeshRelatedData));
+				computeShaderResourceMeshRelatedData->Unmap(0, nullptr);
+			}
+
+			nrOfMeshes++;
 		}
 	}
 	void* dataPtr2;
@@ -1189,6 +1215,7 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&computeShaderResourceHeapSRV);
 	SafeRelease(&computeShaderResourceHeapUAV);
 	SafeRelease(&computeShaderResourceMeshes);
+	SafeRelease(&computeShaderResourceMeshRelatedData);
 	SafeRelease(&computeShaderResourceFrameData);
 	SafeRelease(&computeShaderResourceLightData);
 	SafeRelease(&prePassFence);

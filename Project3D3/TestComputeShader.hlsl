@@ -11,7 +11,6 @@ struct VertexData
 RWTexture2D<float> map : register(u0);
 Texture2D<float> depth : register(t0);
 StructuredBuffer<VertexData> meshPositions : register(t1);
-SamplerState sampState;
 
 cbuffer FrameData : register(b0)
 {
@@ -26,7 +25,6 @@ cbuffer FrameData : register(b0)
 
 	float2 pad;
 
-	//float4x4 projMat;
 	float4x4 viewMat;
 }
 
@@ -37,6 +35,21 @@ cbuffer LightData : register(b1)
 	float4 posAndActiveW[NROFLIGHTS];
 	float4 colourAndRangeW[NROFLIGHTS];
 }
+
+#define MAXNROFMESHES 1
+
+struct MeshRelatedData
+{
+	float4x4 worldMatrix;
+	int nrOfTrianglesInMesh;
+	int3 padding;
+};
+
+cbuffer MeshMatrices : register(b2)
+{
+	MeshRelatedData data;
+}
+
 
 float raysVsSphere(float3 origin, float3 direction, float3 sphereOrigin, float sphereRadius)
 {
@@ -65,16 +78,22 @@ float raysVsSphere(float3 origin, float3 direction, float3 sphereOrigin, float s
 		return 1550;
 }
 
-float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint)
+float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint, unsigned int worldMatrixIndex)
 {
 	float3 points[3];
 	points[0] = meshPositions[indexFirstPoint + 0].position;
 	points[1] = meshPositions[indexFirstPoint + 1].position;
 	points[2] = meshPositions[indexFirstPoint + 2].position;
 	int sizeFactor = 2;
-	points[0] = float3(0.5f, -0.5f, 0.0f) * sizeFactor;
-	points[1] = float3(-0.5f, -0.5f, 0.0f) * sizeFactor;
-	points[2] = float3(0.0f, 0.5f, 0.0f) * sizeFactor;
+	points[0] = float3(-0.5f, -0.5f, 0.0f) * sizeFactor;
+	points[1] = float3(0.5f, -0.5f, 0.0f) * sizeFactor;
+	points[2] = float3(-0.0f, 0.5f, 0.0f) * sizeFactor;
+
+	for (int i = 0; i < 3; i++)
+	{
+		points[i] = mul(points[i], data.worldMatrix);
+	}
+
 
 
 	float3 e1 = points[1].xyz - points[0].xyz;
@@ -204,90 +223,45 @@ void main( uint3 threadID : SV_DispatchThreadID )
 	float2 xyCoords = threadID.xy / float2(windowWidth, windowHeight);
 	xyCoords.y = 1 - xyCoords.y;
 	float depthValue = depth[threadID.xy];
-	//map[threadID.xy] = depthValue;
-	//return;
 
 	float3 posW = WorldPosFromDepth(depthValue, xyCoords);
-
-	//float3 posV = ViewPosFromDepth(depthValue, xyCoords);
-
-
-	float3 origin = float3(1.5f, 0.0f, 0.0f);
+	float3 origin = float3(0.0f, 3.0f, 2.0f);
 	float distance = length(posW.xyz - origin);
 	float3 direction = normalize(posW.xyz - origin);
 
-	map[threadID.xy] = 1.0f;
+	float outputValue = 1.0f;
+	int meshDataIndex = 0;
+	int trianglesOfMeshTracedAgainst = 0;
 
-	for (int i = 0; i < 1; i++)
+	if (data.padding[0] == 3)
+		map[threadID.xy] = 1.0f;
+	else
+		map[threadID.xy] = 0.0f;
+
+	return;
+
+	for (int i = 0; i < nrOfTriangles; i++)
 	{
-		//float temp = rayVsMeshTriangle(origin, direction, i * 3);
-		float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 0.5);
+
+		float temp = rayVsMeshTriangle(origin, direction, i * 3, meshDataIndex);
+		//float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 0.5);
 
 		if (temp < distance)
-			map[threadID.xy] = 0.2f;
+		{
+			outputValue = 0.2f;
+			break;
+		}
+
+		trianglesOfMeshTracedAgainst++;
+
+		if (trianglesOfMeshTracedAgainst > data.nrOfTrianglesInMesh)
+		{
+			trianglesOfMeshTracedAgainst = 0;
+			meshDataIndex++;
+		}
+
 	}
 
-	//map[threadID.xy] = posW.x;
-
-	//if(depthValue > 1)
-	//	map[threadID.xy] = 0.0;
-	//else
-	//	map[threadID.xy] = depthValue;
-
-	//map[threadID.xy] = posW.x;
-
-	//if (viewMat[1][1] == 1.0f)
-	//	map[threadID.xy] = 1.0f;
-	//else
-	//	map[threadID.xy] = 0.0f;
-
-	//if (depthValue > 1 || depthValue < 0)
-	//	map[threadID.xy] = 1.0f;
-	//else
-	//	map[threadID.xy] = 0.0f;
-	//origin = mul(camPos, viewMat);
-	//distance = length(origin - ViewPosFromDepth(depthValue, xyCoords));
-	//map[threadID.xy] = distance;
-
-	//if(distance < 1)
-		//map[threadID.xy] = distance / 10;
-	//else
-		//map[threadID.xy] = 0.0f;
-
-	//for (int l = 0; l < NROFLIGHTS; l++)
-	//{
-	//	//origin = float3(0.0f, 0.0f, 0.0f);
-	//	//direction = float3(0.0f, 0.0f, 1.0f);
-	//	//direction = normalize(posW - origin);
-	//	closestDistance = length(posW.xyz - origin);
-
-	//	for (int i = 0; i < nrOfTriangles; i++)
-	//	{
-	//		//float temp = rayVsMeshTriangle(origin, direction, i * 3);
-	//		float temp = raysVsSphere(origin, direction, float3(0.0f, 0.0f, 10.0f), 2.0f);
-
-	//		if (temp < 1550.0f)/*temp < 0.0f || temp > 0.0f || temp == 0.0f || isinf(temp)*/
-	//		{
-	//			map[threadID.xy] = 1;
-	//			//closestDistance = -temp;
-	//		}
-	//		else
-	//		{
-	//			map[threadID.xy] = posW.z;
-	//		}
-	//	}
-	//}
-	//map[threadID.xy] = posW.x;
-	/*if(closestDistance == 1500)
-		map[threadID.xy] = 0.5;*/
-	//else
-	//	map[threadID.xy] = 0;
-
-	//map[threadID.xy] = closestDistance;
+	map[threadID.xy] = outputValue;
 	
-	//map[threadID.xy] = closestDistance / 4;
-
-	//map[threadID.xy] = (1 - length(threadID.xy - float2(640, 360)) / 640.0f);
-	//map[threadID.xy] = depth[threadID.xy];
-	//map[threadID.xy] = meshPositions[threadID.x % (NROFTRIANGLES * 3)].position.x;
 }

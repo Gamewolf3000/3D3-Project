@@ -129,6 +129,11 @@ void ConstantBufferHandler::SetGraphicsRoot(ConstantBufferType bufferType, UINT 
 	cmdList->SetGraphicsRootDescriptorTable(index, GPUHandle);
 }
 
+void * ConstantBufferHandler::GetBufferData(UINT8 ID, ConstantBufferType bufferType)
+{
+	return bufferVector[ID][bufferType]->rawData;
+}
+
 ConstantBufferHandler::ConstantBufferHandler(ConstantBufferSizes sizes, UINT16 maximumNumberOfBindings, ID3D12Device* deviceRef)
 {
 	this->maximumNumberOfBuffersBoundAtOnce = maximumNumberOfBindings;
