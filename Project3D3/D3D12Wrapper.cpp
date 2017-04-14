@@ -783,6 +783,11 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	rootData[1].type.push_back(SRV);
 	rootData[1].visibility.push_back(PIXEL);
 
+	SRV.shaderRegister = 3;
+	SRV.type = ResourceType::SRV;
+	rootData[1].type.push_back(SRV);
+	rootData[1].visibility.push_back(PIXEL);
+
 	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[1], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, true);
 	
 	/*Set the Render targets as shared resources*/
@@ -841,7 +846,7 @@ void D3D12Wrapper::FinishMeshRendering()
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	//state after
 	);
-
+	
 }
 
 void D3D12Wrapper::LightPass()
@@ -876,6 +881,10 @@ void D3D12Wrapper::LightPass()
 	commandList->SetGraphicsRootDescriptorTable(3, handle);
 	handle.ptr += incrementSize;
 	commandList->SetGraphicsRootDescriptorTable(4, handle);
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(computeShaderResourceHeapSRV->GetGPUDescriptorHandleForHeapStart());
+	commandList->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
+	commandList->SetGraphicsRootDescriptorTable(5, texHandle);
 
 	commandList->DrawInstanced(6, 1, 0, 0);
 

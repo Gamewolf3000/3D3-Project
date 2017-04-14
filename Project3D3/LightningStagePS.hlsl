@@ -2,6 +2,7 @@
 Texture2D normalTexture : register(t0);
 Texture2D colour : register(t1);
 Texture2D worldPos : register(t2);
+Texture2D shadows : register(t3);
 
 struct lightData
 {
@@ -59,5 +60,5 @@ float4 main(in float4 screenPos : SV_Position) : SV_TARGET
         totalColour.xyz += (diffuse + specular) * attenuation;
 
     }
-    return float4(totalColour.xyz, 1.0f);
+    return float4(totalColour.xyz*shadows.Load(sampleIndices).x, 1.0f);
 }
