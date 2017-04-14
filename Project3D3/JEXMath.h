@@ -42,10 +42,13 @@
 #define MatrixScaling(x, y, z) DirectX::XMMatrixScaling(x, y, z)
 #define MatrixScalingFromVector(vector) DirectX::XMMatrixScalingFromVector(vector)
 #define MatrixViewLH(posVec, lookatVec, upVec) DirectX::XMMatrixLookAtLH(posVec, lookatVec, upVec)
+#define MatrixViewRH(posVec, lookatVec, upVec) DirectX::XMMatrixLookAtRH(posVec, lookatVec, upVec)
 #define MatrixProjectionLH(fov, aspectRatio, nearPlane, farPlane) DirectX::XMMatrixPerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane)
+#define MatrixProjectionRH(fov, aspectRatio, nearPlane, farPlane) DirectX::XMMatrixPerspectiveFovRH(fov, aspectRatio, nearPlane, farPlane)
 #define MatrixGetTransposed(matrix) DirectX::XMMatrixTranspose(matrix)
 #define MatrixTranspose(matrix) matrix = DirectX::XMMatrixTranspose(matrix)
 #define MatrixGetDeterminant(matrix) DirectX::XMVectorGetByIndex(XMMatrixDeterminant(matrix), 0)
+#define MatrixInvert(matrix) DirectX::XMMatrixInverse(nullptr, matrix)
 
 #define MatrixToFloat4x4(float4x4, matrix) DirectX::XMStoreFloat4x4(&float4x4, matrix)
 #define Float4x4ToMatrix(float4x4) DirectX::XMLoadFloat4x4(&float4x4)

@@ -202,6 +202,10 @@ ID3D12RootSignature * Pipeline::CreateComputeRootSignature(RootSignatureData roo
 		{
 			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, rootData.type[i].shaderRegister);
 		}
+		else if (rootData.type[i].type == ResourceType::SAMPLER)
+		{
+			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, rootData.type[i].shaderRegister);
+		}
 		else if (rootData.type[i].type == ResourceType::UAV)
 		{
 			descRanges[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, rootData.type[i].shaderRegister);
@@ -211,7 +215,16 @@ ID3D12RootSignature * Pipeline::CreateComputeRootSignature(RootSignatureData roo
 	CD3DX12_ROOT_PARAMETER* rootParameters = new CD3DX12_ROOT_PARAMETER[rootData.type.size()];
 	for (int i = 0; i < rootData.type.size(); i++)
 	{
-		rootParameters[i].InitAsDescriptorTable(1, &descRanges[i], D3D12_SHADER_VISIBILITY_ALL);
+		if (rootData.type[i].rType == RootType::DESCRIPTOR_TABLE)
+			rootParameters[i].InitAsDescriptorTable(1, &descRanges[i], D3D12_SHADER_VISIBILITY_ALL);
+		else if (rootData.type[i].rType == RootType::CBV_ROOT)
+			rootParameters[i].InitAsConstantBufferView(rootData.type[i].shaderRegister);
+		else if (rootData.type[i].rType == RootType::SRV_ROOT)
+			rootParameters[i].InitAsShaderResourceView(rootData.type[i].shaderRegister);
+		else if (rootData.type[i].rType == RootType::SAMPLER_ROOT)
+			rootParameters[i].InitAsDescriptorTable(1, &descRanges[i], D3D12_SHADER_VISIBILITY_ALL); // this is weird, but maybe works
+		else if (rootData.type[i].rType == RootType::UAV_ROOT)
+			rootParameters[i].InitAsUnorderedAccessView(rootData.type[i].shaderRegister);
 	}
 
 	CD3DX12_ROOT_SIGNATURE_DESC rsDesc;
@@ -292,6 +305,7 @@ UINT8 Pipeline::CreateComputePipeline(RootSignatureData rsData, std::string cs)
 	ID3DBlob* computeBlob;
 	std::wstring temp = std::wstring(cs.begin(), cs.end());
 	LPCWSTR fileName = temp.c_str();
+
 	hr = D3DCompileFromFile(
 		fileName,		// filename
 		nullptr,		// optional macros

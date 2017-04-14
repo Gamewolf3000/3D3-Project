@@ -47,13 +47,36 @@ struct ViewProjectionStruct
 	Float4x4 viewMatrix;
 };
 
+struct ComputeShaderStruct
+{
+	Float4x4 revProjMat;
+	Float4x4 revViewMat;
+
+	int nrOfTriangles;
+	Float3D camPos;
+
+	unsigned int windowWidth;
+	unsigned int windowHeight;
+
+	Float2D pad;
+
+	Float4x4 viewMat;
+};
+
+struct MeshRelatedData
+{
+	Float4x4 worldMatrix;
+	int nrOfTrianglesMeshHas;
+	int padding[3] = { 3, 4, 5 };
+};
+
 class D3D12Wrapper
 {
 private:
 	HWND window;
 
-	UINT16 windowHeight;
-	UINT16 windowWidth;
+	UINT32 windowHeight;
+	UINT32 windowWidth;
 
 	ID3D12Device* device;
 	ID3D12GraphicsCommandList* commandList;
@@ -66,6 +89,10 @@ private:
 	UINT64 fenceValue;
 	HANDLE eventHandle;
 
+	ID3D12Fence* prePassFence;
+	UINT64 prePassFenceValue;
+	HANDLE prePassEventHandle;
+
 	ID3D12DescriptorHeap* renderTargetsHeap;
 
 	void* textureBufferCPU_mappedPtr;
@@ -77,6 +104,9 @@ private:
 	ID3D12DescriptorHeap* computeShaderResourceHeapUAV = nullptr;
 	ID3D12Resource* computeShaderResourceOutput = nullptr;
 	ID3D12Resource* computeShaderResourceInput = nullptr;
+	ID3D12Resource* computeShaderResourceMeshes = nullptr;
+	ID3D12Resource* computeShaderResourceFrameData = nullptr;
+	ID3D12Resource* computeShaderResourceLightData = nullptr;
 
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
@@ -86,7 +116,10 @@ private:
 	UINT8 vpID;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
+	ViewProjectionStruct computeCamera;
+
 	Float3D camPos;
+	float rotation;
 
 	D3D12_VIEWPORT vp;
 	D3D12_RECT scissorRect;
@@ -111,6 +144,7 @@ private:
 	void DisplayFps();
 	void DispatchComputeShader();
 	void CopyDepthBuffer();
+	void RenderPrePass(EntityHandler* handler);
 
 	void WaitForGPU();
 
@@ -155,7 +189,9 @@ public:
 
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
+	UINT8 prePassPipelineID = -1;
 	UINT8 computePipelineID = -1;
+	bool renderPrePass = true;
 	UINT8 viewProjID = 127;
 	UINT8 camPosID = 126;
 	UINT8 lightID = 125;

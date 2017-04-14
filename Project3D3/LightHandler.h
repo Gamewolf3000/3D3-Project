@@ -33,12 +33,14 @@ private:
 	bool changeMade;
 
 public:
-	LightHandler(INT8 maximumNumberOfLights = 10);
+	LightHandler(INT8 maximumNumberOfLights = MAXNROFLIGHTS);
 	~LightHandler();
 	void AddLight(INT8 entityID, float colour[4], float position[4], float range);
 	void ToggleLightActive(INT8 entityID, bool active);
 	void* GatherLightJobs();
 	UINT GetNrOfActiveLights();
+
+	LightHandler::UINT GetNrOfActiveLights();
 
 	
 

@@ -35,10 +35,20 @@ enum ResourceType
 	UAV // not implemented in graphics pipeline
 };
 
+enum RootType
+{
+	DESCRIPTOR_TABLE,
+	CBV_ROOT,
+	SRV_ROOT,
+	SAMPLER_ROOT,
+	UAV_ROOT
+};
+
 struct ResourceDescription
 {
 	ResourceType type;
 	UINT8 shaderRegister;
+	RootType rType = DESCRIPTOR_TABLE;
 };
 
 enum ShaderVisibility

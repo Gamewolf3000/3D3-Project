@@ -62,11 +62,22 @@ void * LightHandler::GatherLightJobs()
 				offset += size;
 			}
 		}
+
 		changeMade = false;
 	}
 
-
 	return returnData;
+}
+
+LightHandler::UINT LightHandler::GetNrOfActiveLights()
+{
+	UINT activeLights = 0;
+	for (auto &data : pointLightMap)
+	{
+		if (data.second->active)
+			activeLights++;
+	}
+	return activeLights;
 }
 
 LightHandler::UINT LightHandler::GetNrOfActiveLights()
