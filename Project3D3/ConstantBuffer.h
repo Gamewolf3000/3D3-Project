@@ -20,8 +20,8 @@ public:
 		VERTEX_SHADER_PER_OBJECT_DATA,
 		VERTEX_SHADER_PER_FRAME_DATA,
 		PIXEL_SHADER_LIGHT_DATA,
-		COMPUTE_MATRICES_NROFTRIANGLES,
-		COMPUTE_LIGHT_DATA
+		COMPUTE_LIGHT_DATA,
+		COMPUTE_CAMERA_POS
 	};
 	/*MUST be set by the caller. Data to create the "size" of the buffers.
 	NOTE: If the above enum gets extra data, so must the struct!*/
@@ -29,8 +29,8 @@ public:
 		UINT16 VERTEX_SHADER_PER_OBJECT_DATA_SIZE = 0;
 		UINT16 VERTEX_SHADER_PER_FRAME_DATA_SIZE = 0;
 		UINT16 PIXEL_SHADER_LIGHT_DATA_SIZE = 0;
-		UINT16 COMPUTE_MATRICES_NROFTRIANGLES = 0;
 		UINT16 COMPUTE_LIGHT_DATA_SIZE = 0;
+		UINT16 COMPUTE_CAMERA_POS_SIZE = 0;
 		UINT16 operator[](UINT index)
 		{
 			switch (index)
@@ -42,9 +42,9 @@ public:
 			case 2:
 				return PIXEL_SHADER_LIGHT_DATA_SIZE;
 			case 3:
-				return COMPUTE_MATRICES_NROFTRIANGLES;
-			case 4:
 				return COMPUTE_LIGHT_DATA_SIZE;
+			case 4:
+				return COMPUTE_CAMERA_POS_SIZE;
 			}
 		}
 	};
@@ -58,7 +58,6 @@ public:
 	void UpdateBuffer(UINT8 ID, ConstantBufferType bufferType, void* newData);
 	void SetDescriptorHeap(ConstantBufferType bufferType, ID3D12GraphicsCommandList* cmdList);
 	void SetGraphicsRoot(ConstantBufferType bufferType, UINT index, UINT offset, ID3D12GraphicsCommandList* cmdList);
-	void* GetBufferData(UINT8 ID, ConstantBufferType bufferType);
 
 	ConstantBufferHandler(ConstantBufferSizes sizes = ConstantBufferSizes() , UINT16 maximumNumberOfBindings = 512, ID3D12Device* deviceRef = nullptr);
 	~ConstantBufferHandler();

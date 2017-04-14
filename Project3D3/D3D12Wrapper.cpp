@@ -13,27 +13,36 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 	pipelineHandler = new Pipeline(device);
 	CreatePipelines();
-	lightHandler = new LightHandler;
+	lightHandler = new LightHandler(MAXNROFLIGHTS);
 	meshHandler = new MeshHandler(device);
 	textureHandler = new TextureHandler(device);
 
 	auto sizes = ConstantBufferHandler::ConstantBufferSizes();
 	sizes.VERTEX_SHADER_PER_OBJECT_DATA_SIZE = sizeof(ConstantBufferStruct);
 	sizes.VERTEX_SHADER_PER_FRAME_DATA_SIZE = sizeof(ViewProjectionStruct);
-	sizes.PIXEL_SHADER_LIGHT_DATA_SIZE = sizeof(LightHandler::PointLight);
-	sizes.COMPUTE_MATRICES_NROFTRIANGLES = sizeof(Float4x4) * 2 + sizeof(int);
+	sizes.PIXEL_SHADER_LIGHT_DATA_SIZE = sizeof(LightHandler::PointLight)*MAXNROFLIGHTS;
 	sizes.COMPUTE_LIGHT_DATA_SIZE = sizeof(float); /*To be edited!*/
+	sizes.COMPUTE_CAMERA_POS_SIZE = sizeof(Float4D);
 	constantBufferHandler = new ConstantBufferHandler(sizes, 512, device);
 
 	vpStruct = new ViewProjectionStruct;
 
 	MatrixToFloat4x4(vpStruct->viewMatrix, MatrixTranspose(MatrixViewLH(VecCreate(0, 0, -1, 1), VecCreate(0, 0, 0, 1), VecCreate(0, 1, 0, 0))));
 	MatrixToFloat4x4(vpStruct->projectionMatrix, MatrixTranspose(MatrixProjectionLH(JEX_PI/2, 1280.0/720.0, 0.1f, 100.0f)));
-	camPos = Float3D(0, 0, -1);
+	camPos = Float3D(0.0f, 0.0f, -1.0f);
 
-	MatrixToFloat4x4(computeCamera.projectionMatrix, MatrixProjectionLH(JEX_PI / 2, 1280.0 / 720.0, 0.1f, 100.0f));
-
-	//Matrix test = MatrixProjectionLH(JEX_PI / 2, 1280.0 / 720.0, 0.1f, 100.0f);
+	float lightColour[4] = { .5f, .5f, 0.5f, 1.0f };
+	float position[4] = { .0f, -3.0f, -4.0f, 1.0f };
+	for (int i = 0; i < MAXNROFLIGHTS; i++)
+	{
+		position[0] = 2.5f*cos(i * 2.0 * JEX_PI / MAXNROFLIGHTS);
+		position[1] = -3.0f + 2.5f*sinf(i * 2 * JEX_PI / MAXNROFLIGHTS);
+		position[2] = 2.5f*sin(i * 2.0 * JEX_PI / MAXNROFLIGHTS);
+		lightColour[0] = abs(2.5f*cos(i * 2.0 * JEX_PI / MAXNROFLIGHTS))*0.15f*(1.0f / MAXNROFLIGHTS);
+		lightColour[1] = abs(-3.0f + 2.5f*sinf(i * 2 * JEX_PI / MAXNROFLIGHTS))*0.15f*(1.0f / MAXNROFLIGHTS);
+		lightColour[2] = abs(2.5f*sin(i * 2.0 * JEX_PI / MAXNROFLIGHTS))*.15f*(1.0f / MAXNROFLIGHTS);
+		lightHandler->AddLight(i, lightColour, position, 5.f);
+	}
 
 	//constantBufferHandler->CreateConstantBuffer(127, vpStruct, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA);
 	SetupComputeShader();
@@ -58,138 +67,80 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 {
 	DisplayFps();
 	timer->Tick();
-
 	const std::vector<Entity*> &entities = handler->GetEntityVector();
 	
-	if (renderPrePass == true)
-	{
-		RenderPrePass(handler);
-		//renderPrePass = false;
-	}
-
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
 
-	//for (auto &textureJobs : handler->GetTextureJobs())
-	//{
-	//	//Handle the job
-	//	entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
+	for (auto &textureJobs : handler->GetTextureJobs())
+	{
+		//Handle the job
+		entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
 
-	//	commandList->Close();
-	//	ID3D12CommandList* listsToExecute[] = { commandList };
-	//	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+		commandList->Close();
+		ID3D12CommandList* listsToExecute[] = { commandList };
+		commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
-	//	WaitForGPU();
+		WaitForGPU();
 
-	//	commandAllocator->Reset();
-	//	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
-	//	WaitForGPU();
+		commandAllocator->Reset();
+		HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+		WaitForGPU();
 
-	//}
-	//handler->GetTextureJobs().clear();
+	}
+	handler->GetTextureJobs().clear();
 
 	//Set necessary states.
 	commandList->RSSetViewports(1, &vp);
 	commandList->RSSetScissorRects(1, &scissorRect);
 
-	//Indicate that the back buffer will be used as render target.
-	SetResourceTransitionBarrier(commandList,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_PRESENT,		//state before
-		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
-	);
-
-	ClearBuffer();
 
 	pipelineHandler->SetPipelineState(meshPipelineID, commandList);
 	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
-	constantBufferHandler->UpdateBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
-	constantBufferHandler->BindBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
+	constantBufferHandler->UpdateBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
+	constantBufferHandler->BindBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
 
 
 	UINT index = 0;
-	//static float rotation = 0.0f;
-	//for (auto &transformJobs : handler->GetTransformJobs())
-	//{
-	//	/*Get the constant buffer that contains the transform job -> Update the buffer and bind it*/
-	//	/*Fetch the data here*/
-	//	Float4x4 finalMatrix;
+	static float rotation = 0.0f;
+	for (auto &transformJobs : handler->GetTransformJobs())
+	{
+		/*Get the constant buffer that contains the transform job -> Update the buffer and bind it*/
+		/*Fetch the data here*/
+		Float4x4 finalMatrix;
 
-	//	Matrix scaling = MatrixScaling(transformJobs.scale, transformJobs.scale, transformJobs.scale);
-	//	Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
-	//	MatrixToFloat4x4(finalMatrix, MatrixTranspose(scaling * (MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]))*translation));
-	//	
-	//	constantBufferHandler->UpdateBuffer(transformJobs.entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, &finalMatrix);
-	//
-	//	//Handle the job
-	//}
-	//handler->GetTransformJobs().clear();
+		Matrix scaling = MatrixScaling(transformJobs.scale, transformJobs.scale, transformJobs.scale);
+		Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
+		MatrixToFloat4x4(finalMatrix, MatrixTranspose(scaling * (MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]))*translation));
+		
+		constantBufferHandler->UpdateBuffer(transformJobs.entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, &finalMatrix);
+	
+		//Handle the job
+	}
+	handler->GetTransformJobs().clear();
 
-	//for (auto &meshJobs : handler->GetMeshJobs())
-	//{
-	//	//Handle the job
-	//	entities[meshJobs.entityID]->meshID = meshHandler->LoadMesh(meshJobs.fileName);
-	//}
-	//handler->GetMeshJobs().clear();
+	for (auto &meshJobs : handler->GetMeshJobs())
+	{
+		//Handle the job
+		entities[meshJobs.entityID]->meshID = meshHandler->LoadMesh(meshJobs.fileName);
+	}
+	handler->GetMeshJobs().clear();
 
-	//for (auto &lightJobs : handler->GetLightJobs())
-	//{
-	//	//HANDLE IT
-	//}
+	for (auto &lightJobs : handler->GetLightJobs())
+	{
+		//HANDLE IT
+	}
 
-	//for (auto &pipelineJobs : handler->GetPipelineJobs())
-	//{
-	//	//Handle the job
-	//}
+	for (auto &pipelineJobs : handler->GetPipelineJobs())
+	{
+		//Handle the job
+	}
 
-	//int nrOfTriangles = 0;
-	UINT vertexOffset = 0;
+	SetupMeshRendering();
+
 	D3D12_RANGE range = { 0, 0 };
-	//void* dataPtr;
-	//for (int i = 0; i < entities.size(); i++)
-	//{
-	//	if (entities[i]->render)
-	//	{
-
-	//		RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
-
-	//		if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
-	//		{
-	//			// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
-	//			// but for now just a breakpoint, thats an easy solution
-	//			int a = 0;
-	//			a++;
-	//		}
-
-	//		void* bufferData = rData.data;
-	//		computeShaderResourceMeshes->Map(0, &range, &dataPtr);
-	//		memcpy((char*)dataPtr + vertexOffset, bufferData, rData.size);
-	//		computeShaderResourceMeshes->Unmap(0, nullptr);
-
-	//		vertexOffset += rData.nrOfIndices * VERTEXSIZE;
-	//		nrOfTriangles += rData.nrOfTriangles;
-	//	}
-	//}
-	//void* dataPtr2;
-	//ViewProjectionStruct tempVP;
-	//
-	//MatrixToFloat4x4(tempVP.projectionMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)))));
-	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)))));
-	////MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixViewLH(VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z, 1), VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z + 1.0f, 1.0f), VecCreate(0.0f, 1.0f, 0.0f, 0.0f)))));
-
-	//computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
-	//memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpStruct->projectionMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float4x4), &vpStruct->viewMatrix, sizeof(Float4x4));
-	//computeShaderResourceFrameData->Unmap(0, nullptr);
-
-	vertexOffset = 0;
+	UINT vertexOffset = 0;
 	UINT indexOffset = 0;
 	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
 	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
@@ -218,6 +169,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 			rData.vBufferView.BufferLocation += vertexOffset;
 
 			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
+
+			//Should work, but is unnecessary
 
 			void* bufferData2 = rData.indexBuffer;
 			void* dataBegin2;
@@ -275,6 +228,10 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
 
+	FinishMeshRendering();
+
+	LightPass();
+	
 	commandList->Close();
 
 	Present();
@@ -285,8 +242,8 @@ void D3D12Wrapper::MoveCamera(Float3D position, float rotation)
 {
 	Vec lookDir = VecCreate(0, 0, 1, 0);
 	Vec positionVec = VecCreate(position.x, position.y, position.z, 1.0f);
+
 	camPos = position;
-	this->rotation = rotation;
 
 	Matrix rotMatrix = MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), rotation);
 
@@ -439,7 +396,7 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	DXGI_SWAP_CHAIN_DESC1 scDesc = {};
 	scDesc.Width = 0;
 	scDesc.Height = 0;
-	scDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	scDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	scDesc.Stereo = FALSE;
 	scDesc.SampleDesc.Count = 1;
 	scDesc.SampleDesc.Quality = 0;
@@ -468,11 +425,6 @@ void D3D12Wrapper::CreateFenceAndEventHandle()
 	fenceValue = 1;
 	//Create an event handle to use for GPU synchronization.
 	eventHandle = CreateEvent(0, false, false, 0);
-
-	device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&prePassFence));
-	prePassFenceValue = 1;
-	//Create an event handle to use for GPU synchronization.
-	prePassEventHandle = CreateEvent(0, false, false, 0);
 }
 
 void D3D12Wrapper::CreateRenderTargets()
@@ -569,22 +521,6 @@ void D3D12Wrapper::SetupComputeShader()
 	SRV.shaderRegister = 0;
 	rsData.type.push_back(SRV);
 
-	SRV.type = ResourceType::SRV;
-	SRV.shaderRegister = 1;
-	SRV.rType = SRV_ROOT;
-	rsData.type.push_back(SRV);
-
-	ResourceDescription CBV;
-	CBV.type = ResourceType::CBV;
-	CBV.shaderRegister = 0;
-	CBV.rType = CBV_ROOT;
-	rsData.type.push_back(CBV);
-
-	CBV.type = ResourceType::CBV;
-	CBV.shaderRegister = 1;
-	CBV.rType = CBV_ROOT;
-	rsData.type.push_back(CBV);
-
 	computePipelineID = pipelineHandler->CreateComputePipeline(rsData, "TestComputeShader.hlsl");
 
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -649,48 +585,282 @@ void D3D12Wrapper::SetupComputeShader()
 
 	//---------------------------------------------------------------------------------------------------------------------
 
-	D3D12_HEAP_PROPERTIES hp = {};
-	hp.Type = D3D12_HEAP_TYPE_UPLOAD;
-	hp.CreationNodeMask = 1;
-	hp.VisibleNodeMask = 1;
 
-	D3D12_RESOURCE_DESC rd = {};
-	rd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	rd.Width = HEAP_SIZE;
-	rd.Height = 1;
-	rd.DepthOrArraySize = 1;
-	rd.MipLevels = 1;
-	rd.SampleDesc.Count = 1;
-	rd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-	//Creates both a resource and an implicit heap, such that the heap is big enough
-	//to contain the entire resource and the resource is mapped to the heap. 
-	hr = device->CreateCommittedResource(
-		&hp,
-		D3D12_HEAP_FLAG_NONE,
-		&rd,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&computeShaderResourceMeshes));
+}
 
-	hr = device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(ComputeShaderStruct)),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&computeShaderResourceFrameData)
+void D3D12Wrapper::InitializeDeferredRendering()
+{
+	RootSignatureData rootData[2];
+	ResourceDescription CBV;
+
+	/*Rasterizing Stage*/
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData[0].type.push_back(CBV);
+	rootData[0].visibility.push_back(VERTEX);
+	CBV.shaderRegister = 1;
+	rootData[0].type.push_back(CBV);
+	rootData[0].visibility.push_back(VERTEX);
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData[0].type.push_back(CBV);
+	rootData[0].visibility.push_back(PIXEL);
+
+	ResourceDescription SRV;
+	SRV.shaderRegister = 0;
+	SRV.type = ResourceType::SRV;
+	rootData[0].type.push_back(SRV);
+	rootData[0].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 1;
+	SRV.type = ResourceType::SRV;
+	rootData[0].type.push_back(SRV);
+	rootData[0].visibility.push_back(PIXEL);
+
+	ResourceDescription SAMP;
+	SAMP.shaderRegister = 0;
+	SAMP.type = ResourceType::SAMPLER;
+	rootData[0].type.push_back(SAMP);
+	rootData[0].visibility.push_back(PIXEL);
+
+	std::vector<InputLayoutData> layoutData;
+	InputLayoutData tempLayout;
+	tempLayout.inputName = "POSITION";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "TEXCOORDS";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_2;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "NORMAL";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "TANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+	tempLayout.inputName = "BITANGENT";
+	tempLayout.arraySize = 1;
+	tempLayout.dataType = FLOAT32_3;
+	layoutData.push_back(tempLayout);
+
+	deferredPipelineID[0] = pipelineHandler->CreatePipeline(rootData[0], "RasterizingStageVS.hlsl", "RasterizingStagePS.hlsl", layoutData, true);
+
+
+	/*Rendering Resources*/
+
+	/*Texture heap (Lightning)*/
+	D3D12_DESCRIPTOR_HEAP_DESC textureDesc = {};
+	textureDesc.NumDescriptors = 3; // maximum number of textures, bad things will probably happen if we have more
+	textureDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	textureDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+	HRESULT hr = device->CreateDescriptorHeap(&textureDesc, IID_PPV_ARGS(&GBufferHeapLightning));
+
+	/*Render target heap (Rendering)*/
+	textureDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	textureDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+	hr = device->CreateDescriptorHeap(&textureDesc, IID_PPV_ARGS(&GBufferHeapRendering));
+
+	D3D12_HEAP_PROPERTIES hProperties;
+	hProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+	hProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	hProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	hProperties.CreationNodeMask = 0;
+	hProperties.VisibleNodeMask = 0;
+
+	D3D12_RESOURCE_DESC rDesc;
+
+	rDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	rDesc.Width = windowWidth;
+	rDesc.Height = windowHeight; 
+	rDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	rDesc.DepthOrArraySize = 1;
+	rDesc.MipLevels = 1;
+	rDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	rDesc.SampleDesc.Count = 1;
+	rDesc.SampleDesc.Quality = 0;
+	rDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+	rDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC sRVDesc;
+	sRVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	sRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	sRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	sRVDesc.Texture2D.MipLevels = 1;
+	sRVDesc.Texture2D.MostDetailedMip = 0;
+	sRVDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	sRVDesc.Texture2D.PlaneSlice = 0;
+
+
+	D3D12_CLEAR_VALUE clear;
+	clear.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	clear.Color[0] = 0.0f;
+	clear.Color[1] = 0.0f;
+	clear.Color[2] = 1.0f;
+	clear.Color[3] = 1.0f;
+	
+	LPCWSTR names[3] = { L"GBuffer: Normal", L"GBuffer: Colour", L"GBuffer: Pos" };
+
+	auto rtvHandle = GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart();
+	auto rtvIncrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	auto shaderViewHandle = GBufferHeapLightning->GetCPUDescriptorHandleForHeapStart();
+	auto shaderViewIncrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	for (int i = 0; i < 3; i++)
+	{
+		hr = device->CreateCommittedResource(&hProperties,
+			D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
+			&rDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			&clear,
+			IID_PPV_ARGS(&GBuffers[i]));
+		GBuffers[i]->SetName(names[i]);
+
+		device->CreateShaderResourceView(GBuffers[i], &sRVDesc, shaderViewHandle);
+		device->CreateRenderTargetView(GBuffers[i], nullptr, rtvHandle);
+
+		shaderViewHandle.ptr += shaderViewIncrementSize;
+		rtvHandle.ptr += rtvIncrementSize;
+		
+	}
+
+	/*Create upload heap, make it a shader resource?*/
+
+	/*Light-Pass*/
+	
+	layoutData.clear();
+	CBV.shaderRegister = 0;
+	CBV.type = ResourceType::CBV;
+	rootData[1].type.push_back(CBV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	layoutData.clear();
+	CBV.shaderRegister = 1;
+	CBV.type = ResourceType::CBV;
+	rootData[1].type.push_back(CBV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 0;
+	SRV.type = ResourceType::SRV;
+	rootData[1].type.push_back(SRV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 1;
+	SRV.type = ResourceType::SRV;
+	rootData[1].type.push_back(SRV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	SRV.shaderRegister = 2;
+	SRV.type = ResourceType::SRV;
+	rootData[1].type.push_back(SRV);
+	rootData[1].visibility.push_back(PIXEL);
+
+	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[1], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, true);
+	
+	/*Set the Render targets as shared resources*/
+	/*Creating a texture heap for the light pass*/
+	
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC rvDesc = {};
+	rvDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	rvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	rvDesc.Texture2D.MipLevels = 1;
+	rvDesc.Texture2D.MostDetailedMip = 0;
+	rvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+
+}
+
+void D3D12Wrapper::SetupMeshRendering()
+{
+	pipelineHandler->SetPipelineState(deferredPipelineID[0], commandList);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_NORMAL],
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_COLOUR],
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_POS],
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
+	commandList->OMSetRenderTargets(3, &GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
+	commandList->ClearRenderTargetView(GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), clearColor, 0, nullptr);
+
+	commandList->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+}
+
+void D3D12Wrapper::FinishMeshRendering()
+{
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_NORMAL],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE		//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_COLOUR],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	//state after
+	);
+	SetResourceTransitionBarrier(commandList,
+		GBuffers[GBUFFER_POS],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	//state after
 	);
 
-	hr = device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(LightHandler::PointLight) * MAXNROFLIGHTS + sizeof(int) * 4),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&computeShaderResourceLightData)
+}
+
+void D3D12Wrapper::LightPass()
+{
+	//Indicate that the back buffer will be used as render target.
+	SetResourceTransitionBarrier(commandList,
+		renderTargets[frameIndex],
+		D3D12_RESOURCE_STATE_PRESENT,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
 	);
 
+	ClearBuffer();
+
+	pipelineHandler->SetPipelineState(deferredPipelineID[1], commandList);
+
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::COMPUTE_CAMERA_POS, commandList);
+	constantBufferHandler->UpdateBuffer(camPosID, ConstantBufferHandler::ConstantBufferType::COMPUTE_CAMERA_POS, &camPos);
+	constantBufferHandler->BindBuffer(camPosID, ConstantBufferHandler::ConstantBufferType::COMPUTE_CAMERA_POS, 0);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::COMPUTE_CAMERA_POS, 0, 0, commandList);
+
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
+	constantBufferHandler->UpdateBuffer(lightID, ConstantBufferHandler::ConstantBufferType::PIXEL_SHADER_LIGHT_DATA, lightHandler->GatherLightJobs());
+	constantBufferHandler->BindBuffer(lightID, ConstantBufferHandler::ConstantBufferType::PIXEL_SHADER_LIGHT_DATA, 0);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 1, 0, commandList);
+
+	auto handle = GBufferHeapLightning->GetGPUDescriptorHandleForHeapStart();
+	auto incrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	commandList->SetDescriptorHeaps(1, &GBufferHeapLightning);
+	commandList->SetGraphicsRootDescriptorTable(2, handle);
+	handle.ptr += incrementSize;
+	commandList->SetGraphicsRootDescriptorTable(3, handle);
+	handle.ptr += incrementSize;
+	commandList->SetGraphicsRootDescriptorTable(4, handle);
+
+	commandList->DrawInstanced(6, 1, 0, 0);
+
+	SetResourceTransitionBarrier(commandList,
+		renderTargets[frameIndex],
+		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
+		D3D12_RESOURCE_STATE_PRESENT		//state after
+	);
 }
 
 void D3D12Wrapper::CreatePipelines()
@@ -770,21 +940,7 @@ void D3D12Wrapper::CreatePipelines()
 
 	meshPipelineID = pipelineHandler->CreatePipeline(rootData2, "MeshTestVS.hlsl", "MeshTestPS.hlsl", layoutData2);
 
-
-	RootSignatureData rootData3;
-	ResourceDescription CBV3;
-	CBV3.shaderRegister = 0;
-	CBV3.type = ResourceType::CBV;
-	rootData3.type.push_back(CBV3);
-	rootData3.visibility.push_back(VERTEX);
-	CBV3.shaderRegister = 1;
-	rootData3.type.push_back(CBV3);
-	rootData3.visibility.push_back(VERTEX);
-
-	// Same layout as before so reusing
-
-	prePassPipelineID = pipelineHandler->CreatePipeline(rootData3, "PrePassVs.hlsl", "PrePassPS.hlsl", layoutData2);
-
+	InitializeDeferredRendering();
 }
 
 void D3D12Wrapper::DisplayFps()
@@ -835,241 +991,14 @@ void D3D12Wrapper::DispatchComputeShader()
 	commandList->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
 	commandList->SetComputeRootDescriptorTable(1, depthDescriptor);
 
-	commandList->SetComputeRootShaderResourceView(2, computeShaderResourceMeshes->GetGPUVirtualAddress());
-	commandList->SetComputeRootConstantBufferView(3, computeShaderResourceFrameData->GetGPUVirtualAddress());
-	commandList->SetComputeRootConstantBufferView(4, computeShaderResourceLightData->GetGPUVirtualAddress());
-
-	commandList->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
+	commandList->Dispatch(80, 45, 1);
 
 	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 }
 
 void D3D12Wrapper::CopyDepthBuffer()
 {
-	HRESULT hr;
-
-	//Signal and increment the fence value.
-	const UINT64 fence = fenceValue;
-	hr = commandQueue->Signal(prePassFence, fence);
-	prePassFenceValue++;
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
 	commandList->CopyResource(computeShaderResourceInput, depthstencil);
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-}
-
-void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
-{
-	const std::vector<Entity*> &entities = handler->GetEntityVector();
-
-	commandAllocator->Reset();
-	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
-
-	for (auto &textureJobs : handler->GetTextureJobs())
-	{
-		//Handle the job
-		entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
-
-		commandList->Close();
-		ID3D12CommandList* listsToExecute[] = { commandList };
-		commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
-
-		WaitForGPU();
-
-		commandAllocator->Reset();
-		HRESULT hr = commandList->Reset(commandAllocator, nullptr);
-		WaitForGPU();
-
-	}
-	handler->GetTextureJobs().clear();
-
-	//Set necessary states.
-	commandList->RSSetViewports(1, &vp);
-	commandList->RSSetScissorRects(1, &scissorRect);
-
-	//Indicate that the back buffer will be used as render target.
-	SetResourceTransitionBarrier(commandList,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_PRESENT,		//state before
-		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
-	);
-
-	ClearBuffer();
-
-	pipelineHandler->SetPipelineState(prePassPipelineID, commandList);
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
-	constantBufferHandler->UpdateBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
-	constantBufferHandler->BindBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
-
-	for (auto &transformJobs : handler->GetTransformJobs())
-	{
-		/*Get the constant buffer that contains the transform job -> Update the buffer and bind it*/
-		/*Fetch the data here*/
-		Float4x4 finalMatrix;
-
-		Matrix scaling = MatrixScaling(transformJobs.scale, transformJobs.scale, transformJobs.scale);
-		Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
-		MatrixToFloat4x4(finalMatrix, MatrixTranspose(scaling * (MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]))*translation));
-
-		constantBufferHandler->UpdateBuffer(transformJobs.entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, &finalMatrix);
-
-		//Handle the job
-	}
-	handler->GetTransformJobs().clear();
-
-	for (auto &meshJobs : handler->GetMeshJobs())
-	{
-		//Handle the job
-		entities[meshJobs.entityID]->meshID = meshHandler->LoadMesh(meshJobs.fileName);
-	}
-	handler->GetMeshJobs().clear();
-
-	for (auto &lightJobs : handler->GetLightJobs())
-	{
-		//HANDLE IT
-	}
-
-	for (auto &pipelineJobs : handler->GetPipelineJobs())
-	{
-		//Handle the job
-	}
-
-	int nrOfTriangles = 0;
-	UINT vertexOffset = 0;
-	D3D12_RANGE range = { 0, 0 };
-	void* dataPtr;
-	for (int i = 0; i < entities.size(); i++) // send all the mesh data to the compute shader
-	{
-		if (entities[i]->render)
-		{
-
-			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
-
-			if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
-			{
-				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
-				// but for now just a breakpoint, thats an easy solution
-				int a = 0;
-				a++;
-			}
-
-			void* bufferData = rData.data;
-			computeShaderResourceMeshes->Map(0, &range, &dataPtr);
-			memcpy((char*)dataPtr + vertexOffset, bufferData, rData.size);
-			computeShaderResourceMeshes->Unmap(0, nullptr);
-
-			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
-			nrOfTriangles += rData.nrOfTriangles;
-		}
-	}
-	void* dataPtr2;
-	ViewProjectionStruct tempVP;
-	ComputeShaderStruct uploadData = {};
-
-	float temptest = DirectX::XMMatrixDeterminant(Float4x4ToMatrix(vpStruct->projectionMatrix)).m128_f32[0];
-	DirectX::XMMATRIX testInvert = MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)));
-
-	MatrixToFloat4x4(uploadData.revProjMat, MatrixTranspose(MatrixInvert(Float4x4ToMatrix(computeCamera.projectionMatrix))));
-	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)))));
-	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(MatrixIdentity))));
-
-	Matrix rotMatrix = MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), rotation);
-
-	Vec lookDir = VecCreate(0.0f, 0.0f, 1.0f, 0.0f);
-	lookDir = VecMultMatrix3D(lookDir, rotMatrix);
-
-	Vec positionVec = VecCreate(camPos.x, camPos.y, camPos.z, 1.0f);
-	MatrixToFloat4x4(uploadData.revViewMat, MatrixTranspose(MatrixInvert(MatrixViewLH(positionVec, VecAdd(lookDir, positionVec), VecCreate(0.0f, 1.0f, 0.0f, 0.0f)))));
-
-	Float4x4 vpToSendUp;
-	memcpy(&uploadData.viewMat, &vpStruct->viewMatrix, sizeof(Float4x4));
-
-	uploadData.nrOfTriangles = nrOfTriangles;
-	uploadData.camPos = camPos;
-	uploadData.windowWidth = windowWidth;
-	uploadData.windowHeight = windowHeight;
-	uploadData.pad;
-
-	computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
-	memcpy(dataPtr2, &uploadData, sizeof(uploadData));
-	computeShaderResourceFrameData->Unmap(0, nullptr);
-
-	void* dataPtr3;
-	computeShaderResourceLightData->Map(0, &range, &dataPtr3);
-	memcpy(dataPtr3, lightHandler->GatherLightJobs(), sizeof(LightHandler::PointLight) * lightHandler->GetNrOfActiveLights() + sizeof(int) * 4);
-	computeShaderResourceLightData->Unmap(0, nullptr);
-
-
-	vertexOffset = 0;
-	UINT indexOffset = 0;
-	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
-	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
-	void* dataBegin;
-	UINT index = 0;
-	for (int i = 0; i < entities.size(); i++) // handle pre pass rendering of meshes
-	{
-		if (entities[i]->render)
-		{
-
-			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
-
-			if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
-			{
-				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
-				// but for now just a breakpoint, thats an easy solution
-				int a = 0;
-				a++;
-			}
-
-			void* bufferData = rData.data;
-			vUpload->Map(0, &range, &dataBegin);
-			memcpy((char*)dataBegin + vertexOffset, bufferData, rData.size);
-			vUpload->Unmap(0, nullptr);
-
-			rData.vBufferView.BufferLocation += vertexOffset;
-
-			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
-
-			void* bufferData2 = rData.indexBuffer;
-			void* dataBegin2;
-			iUpload->Map(0, &range, &dataBegin2);
-			memcpy((char*)dataBegin2 + indexOffset, bufferData2, rData.nrOfIndices * sizeof(UINT));
-			iUpload->Unmap(0, nullptr);
-
-			rData.iBufferView.BufferLocation += indexOffset;
-
-			commandList->IASetIndexBuffer(&rData.iBufferView);
-
-			//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
-			constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandList);
-
-			//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
-			commandList->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
-
-			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
-			indexOffset += rData.nrOfIndices * sizeof(UINT);
-
-			index++;
-		}
-	}
-
-	SetResourceTransitionBarrier(commandList,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
-		D3D12_RESOURCE_STATE_PRESENT		//state after
-	);
-
-	DispatchComputeShader();
-
-	commandList->Close();
-
-	//Execute the command list.
-	ID3D12CommandList* listsToExecute[] = { commandList };
-	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
-
-	WaitForGPU();
 }
 
 void D3D12Wrapper::WaitForGPU()
@@ -1089,6 +1018,7 @@ void D3D12Wrapper::WaitForGPU()
 		this->fence->SetEventOnCompletion(fence, eventHandle);
 		WaitForSingleObject(eventHandle, INFINITE);
 	}
+	
 }
 
 void D3D12Wrapper::SetResourceTransitionBarrier(ID3D12GraphicsCommandList * commandList, ID3D12Resource * resource, D3D12_RESOURCE_STATES StateBefore, D3D12_RESOURCE_STATES StateAfter)
@@ -1160,6 +1090,12 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&fence);
 
 	SafeRelease(&renderTargetsHeap);
+	for(int i = 0; i < 3; i++)
+		SafeRelease(&GBuffers[i]);
+
+	SafeRelease(&GBufferHeapRendering);
+	SafeRelease(&GBufferHeapLightning);
+	
 	/*SafeRelease(&samplerHeap);*/
 	//SafeRelease(&textureHeap);
 	for (int i = 0; i < NUM_SWAP_BUFFERS; i++)
@@ -1180,11 +1116,6 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&computeShaderResourceInput);
 	SafeRelease(&computeShaderResourceHeapSRV);
 	SafeRelease(&computeShaderResourceHeapUAV);
-	SafeRelease(&computeShaderResourceMeshes);
-	SafeRelease(&computeShaderResourceFrameData);
-	SafeRelease(&computeShaderResourceLightData);
-	SafeRelease(&prePassFence);
-
 
 	return 0;
 }

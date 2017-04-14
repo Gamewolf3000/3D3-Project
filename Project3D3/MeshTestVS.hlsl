@@ -5,7 +5,7 @@ struct VSIn
 	float3 normal : NORMAL;
 };
 
-cbuffer colourData : register(b0)
+cbuffer perObjectMatrix : register(b0)
 {
 	float4x4 worldMatrix : WORLDMATRIX;
 }

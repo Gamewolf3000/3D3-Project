@@ -49,7 +49,7 @@ void * LightHandler::GatherLightJobs()
 				activeLights++;
 		}
 		size_t size = sizeof(PointLight);
-		returnData = new char[activeLights * size + sizeof(int) * 4];
+		returnData = new char[activeLights * size + sizeof(int)*4];
 		size_t offset = 0;
 		int nrOfLights[4] = { activeLights, 0, 0, 0 };
 		memcpy((char*)(returnData)+offset, &nrOfLights, sizeof(int) * 4);
@@ -62,9 +62,9 @@ void * LightHandler::GatherLightJobs()
 				offset += size;
 			}
 		}
-
 		changeMade = false;
 	}
+
 
 	return returnData;
 }
@@ -79,5 +79,3 @@ LightHandler::UINT LightHandler::GetNrOfActiveLights()
 	}
 	return activeLights;
 }
-
-

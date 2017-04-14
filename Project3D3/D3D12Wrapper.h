@@ -24,8 +24,6 @@
 
 #define NUM_SWAP_BUFFERS 2
 
-#define MAXNROFMESHES 1
-
 template<class Interface>
 inline void SafeRelease(
 	Interface **ppInterfaceToRelease)
@@ -49,36 +47,13 @@ struct ViewProjectionStruct
 	Float4x4 viewMatrix;
 };
 
-struct ComputeShaderStruct
-{
-	Float4x4 revProjMat;
-	Float4x4 revViewMat;
-
-	int nrOfTriangles;
-	Float3D camPos;
-
-	unsigned int windowWidth;
-	unsigned int windowHeight;
-
-	Float2D pad;
-
-	Float4x4 viewMat;
-};
-
-struct MeshRelatedData
-{
-	Float4x4 worldMatrix;
-	int nrOfTrianglesMeshHas;
-	int padding[3] = { 3, 4, 5 };
-};
-
 class D3D12Wrapper
 {
 private:
 	HWND window;
 
-	UINT32 windowHeight;
-	UINT32 windowWidth;
+	UINT16 windowHeight;
+	UINT16 windowWidth;
 
 	ID3D12Device* device;
 	ID3D12GraphicsCommandList* commandList;
@@ -91,10 +66,6 @@ private:
 	UINT64 fenceValue;
 	HANDLE eventHandle;
 
-	ID3D12Fence* prePassFence;
-	UINT64 prePassFenceValue;
-	HANDLE prePassEventHandle;
-
 	ID3D12DescriptorHeap* renderTargetsHeap;
 
 	void* textureBufferCPU_mappedPtr;
@@ -106,9 +77,6 @@ private:
 	ID3D12DescriptorHeap* computeShaderResourceHeapUAV = nullptr;
 	ID3D12Resource* computeShaderResourceOutput = nullptr;
 	ID3D12Resource* computeShaderResourceInput = nullptr;
-	ID3D12Resource* computeShaderResourceMeshes = nullptr;
-	ID3D12Resource* computeShaderResourceFrameData = nullptr;
-	ID3D12Resource* computeShaderResourceLightData = nullptr;
 
 	Pipeline* pipelineHandler;
 	MeshHandler* meshHandler;
@@ -116,13 +84,9 @@ private:
 	LightHandler* lightHandler;
 	UINT8 constantBufferID;
 	UINT8 vpID;
-	UINT8 lightID;
 	ConstantBufferStruct *cbStruct;
 	ViewProjectionStruct *vpStruct;
-	ViewProjectionStruct computeCamera;
-
 	Float3D camPos;
-	float rotation;
 
 	D3D12_VIEWPORT vp;
 	D3D12_RECT scissorRect;
@@ -147,7 +111,6 @@ private:
 	void DisplayFps();
 	void DispatchComputeShader();
 	void CopyDepthBuffer();
-	void RenderPrePass(EntityHandler* handler);
 
 	void WaitForGPU();
 
@@ -161,6 +124,29 @@ private:
 	void Present();
 	D3D12Wrapper();
 
+
+	/*-----------------------------------------------------
+	Deferred Rendering Specifics Starts Right Here
+	-------------------------------------------------------*/
+
+	/*Variables*/
+	UINT8 deferredPipelineID[2] = { (UINT8)-1, (UINT8)-1 };
+	ID3D12DescriptorHeap* GBufferHeapRendering;
+	ID3D12DescriptorHeap* GBufferHeapLightning;
+	ID3D12Resource* GBuffers[3] = { nullptr, nullptr, nullptr };
+	enum GBuffers {
+		GBUFFER_NORMAL,
+		GBUFFER_COLOUR,
+		GBUFFER_POS
+	};
+
+	/*Functions*/
+	void InitializeDeferredRendering();
+	void SetupMeshRendering();
+	void FinishMeshRendering();
+	void LightPass();
+
+
 public:
 	D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT16 height);
 	~D3D12Wrapper();
@@ -169,9 +155,12 @@ public:
 
 	UINT8 testPipelineID = -1;
 	UINT8 meshPipelineID = -1;
-	UINT8 prePassPipelineID = -1;
 	UINT8 computePipelineID = -1;
-	bool renderPrePass = true;
+	UINT8 viewProjID = 127;
+	UINT8 camPosID = 126;
+	UINT8 lightID = 125;
+	
+	
 	ConstantBufferHandler *constantBufferHandler;
 
 	void MoveCamera(Float3D position, float rotation);
