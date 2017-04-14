@@ -4,20 +4,20 @@
 
 #include <map>
 
+#define MAXNROFLIGHTS 10
 
 class LightHandler
 {
 public:
 	struct PointLight
 	{
-		Float4D position;
+		Float4D position_range;
 		Float4D lightColour;
-		Float4D rangeInXRestPadding;
 	};
 
 private:
 	typedef signed char INT8;
-
+	typedef unsigned int UINT;
 	
 	struct PointLightEntity
 	{
@@ -33,11 +33,13 @@ private:
 	bool changeMade;
 
 public:
-	LightHandler(INT8 maximumNumberOfLights = 10);
+	LightHandler(INT8 maximumNumberOfLights = MAXNROFLIGHTS);
 	~LightHandler();
 	void AddLight(INT8 entityID, float colour[4], float position[4], float range);
 	void ToggleLightActive(INT8 entityID, bool active);
 	void* GatherLightJobs();
+
+	LightHandler::UINT GetNrOfActiveLights();
 
 	
 

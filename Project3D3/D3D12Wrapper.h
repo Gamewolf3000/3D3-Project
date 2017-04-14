@@ -107,7 +107,6 @@ private:
 	ID3D12Resource* computeShaderResourceOutput = nullptr;
 	ID3D12Resource* computeShaderResourceInput = nullptr;
 	ID3D12Resource* computeShaderResourceMeshes = nullptr;
-	ID3D12Resource* computeShaderResourceMeshRelatedData = nullptr;
 	ID3D12Resource* computeShaderResourceFrameData = nullptr;
 	ID3D12Resource* computeShaderResourceLightData = nullptr;
 

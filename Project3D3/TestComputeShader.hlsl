@@ -28,26 +28,18 @@ cbuffer FrameData : register(b0)
 	float4x4 viewMat;
 }
 
-#define NROFLIGHTS 5
+#define NROFLIGHTS 10
 
-cbuffer LightData : register(b1)
+struct LightData
 {
-	float4 posAndActiveW[NROFLIGHTS];
-	float4 colourAndRangeW[NROFLIGHTS];
-}
-
-#define MAXNROFMESHES 1
-
-struct MeshRelatedData
-{
-	float4x4 worldMatrix;
-	int nrOfTrianglesInMesh;
-	int3 padding;
+	float4 position_range;
+	float4 colour;
 };
 
-cbuffer MeshMatrices : register(b2)
+cbuffer Lights : register(b1)
 {
-	MeshRelatedData data;
+	int4 nrOfLightsAndPadding;
+	LightData lights[NROFLIGHTS];
 }
 
 
@@ -78,22 +70,12 @@ float raysVsSphere(float3 origin, float3 direction, float3 sphereOrigin, float s
 		return 1550;
 }
 
-float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint, unsigned int worldMatrixIndex)
+float rayVsMeshTriangle(float3 origin, float3 direction, int indexFirstPoint)
 {
 	float3 points[3];
 	points[0] = meshPositions[indexFirstPoint + 0].position;
 	points[1] = meshPositions[indexFirstPoint + 1].position;
 	points[2] = meshPositions[indexFirstPoint + 2].position;
-	int sizeFactor = 2;
-	points[0] = float3(-0.5f, -0.5f, 0.0f) * sizeFactor;
-	points[1] = float3(0.5f, -0.5f, 0.0f) * sizeFactor;
-	points[2] = float3(-0.0f, 0.5f, 0.0f) * sizeFactor;
-
-	for (int i = 0; i < 3; i++)
-	{
-		points[i] = mul(points[i], data.worldMatrix);
-	}
-
 
 
 	float3 e1 = points[1].xyz - points[0].xyz;
@@ -225,25 +207,16 @@ void main( uint3 threadID : SV_DispatchThreadID )
 	float depthValue = depth[threadID.xy];
 
 	float3 posW = WorldPosFromDepth(depthValue, xyCoords);
-	float3 origin = float3(0.0f, 3.0f, 2.0f);
+	float3 origin = float3(0.0f, 0.0f, 2.0f);
 	float distance = length(posW.xyz - origin);
 	float3 direction = normalize(posW.xyz - origin);
 
 	float outputValue = 1.0f;
-	int meshDataIndex = 0;
-	int trianglesOfMeshTracedAgainst = 0;
-
-	if (data.padding[0] == 3)
-		map[threadID.xy] = 1.0f;
-	else
-		map[threadID.xy] = 0.0f;
-
-	return;
 
 	for (int i = 0; i < nrOfTriangles; i++)
 	{
 
-		float temp = rayVsMeshTriangle(origin, direction, i * 3, meshDataIndex);
+		float temp = rayVsMeshTriangle(origin, direction, i * 3);
 		//float temp = raysVsSphere(origin, direction, float3(0, 0, 0), 0.5);
 
 		if (temp < distance)
@@ -251,15 +224,6 @@ void main( uint3 threadID : SV_DispatchThreadID )
 			outputValue = 0.2f;
 			break;
 		}
-
-		trianglesOfMeshTracedAgainst++;
-
-		if (trianglesOfMeshTracedAgainst > data.nrOfTrianglesInMesh)
-		{
-			trianglesOfMeshTracedAgainst = 0;
-			meshDataIndex++;
-		}
-
 	}
 
 	map[threadID.xy] = outputValue;

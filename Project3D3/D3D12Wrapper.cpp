@@ -13,7 +13,7 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 
 	pipelineHandler = new Pipeline(device);
 	CreatePipelines();
-	lightHandler = new LightHandler(512);
+	lightHandler = new LightHandler;
 	meshHandler = new MeshHandler(device);
 	textureHandler = new TextureHandler(device);
 
@@ -585,11 +585,6 @@ void D3D12Wrapper::SetupComputeShader()
 	CBV.rType = CBV_ROOT;
 	rsData.type.push_back(CBV);
 
-	CBV.type = ResourceType::CBV;
-	CBV.shaderRegister = 2;
-	CBV.rType = CBV_ROOT;
-	rsData.type.push_back(CBV);
-
 	computePipelineID = pipelineHandler->CreateComputePipeline(rsData, "TestComputeShader.hlsl");
 
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -690,19 +685,10 @@ void D3D12Wrapper::SetupComputeShader()
 	hr = device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(Float4D) * 2),
+		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(LightHandler::PointLight) * MAXNROFLIGHTS + sizeof(int) * 4),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&computeShaderResourceLightData)
-	);
-
-	hr = device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(MeshRelatedData) * MAXNROFMESHES),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&computeShaderResourceMeshRelatedData)
 	);
 
 }
@@ -851,7 +837,7 @@ void D3D12Wrapper::DispatchComputeShader()
 
 	commandList->SetComputeRootShaderResourceView(2, computeShaderResourceMeshes->GetGPUVirtualAddress());
 	commandList->SetComputeRootConstantBufferView(3, computeShaderResourceFrameData->GetGPUVirtualAddress());
-	commandList->SetComputeRootConstantBufferView(4, computeShaderResourceMeshRelatedData->GetGPUVirtualAddress());
+	commandList->SetComputeRootConstantBufferView(4, computeShaderResourceLightData->GetGPUVirtualAddress());
 
 	commandList->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
 
@@ -949,12 +935,9 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 	}
 
 	int nrOfTriangles = 0;
-	int nrOfMeshes = 0;
 	UINT vertexOffset = 0;
 	D3D12_RANGE range = { 0, 0 };
 	void* dataPtr;
-	void* otherDataPtr;
-	MeshRelatedData storageStruct;
 	for (int i = 0; i < entities.size(); i++) // send all the mesh data to the compute shader
 	{
 		if (entities[i]->render)
@@ -977,19 +960,6 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
 			nrOfTriangles += rData.nrOfTriangles;
-
-			bufferData = constantBufferHandler->GetBufferData(entities[i]->entityID, ConstantBufferHandler::ConstantBufferType::VERTEX_SHADER_PER_OBJECT_DATA);
-			storageStruct.worldMatrix = *(Float4x4*)bufferData;
-			storageStruct.nrOfTrianglesMeshHas = rData.nrOfTriangles;
-
-			if (i == 0)
-			{
-				computeShaderResourceMeshRelatedData->Map(0, &range, &otherDataPtr);
-				memcpy((char*)otherDataPtr + (sizeof(MeshRelatedData)) * nrOfMeshes, &storageStruct, sizeof(MeshRelatedData));
-				computeShaderResourceMeshRelatedData->Unmap(0, nullptr);
-			}
-
-			nrOfMeshes++;
 		}
 	}
 	void* dataPtr2;
@@ -1022,17 +992,13 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 	computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
 	memcpy(dataPtr2, &uploadData, sizeof(uploadData));
-	//memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpToSendUp, sizeof(Float2D)); // padding
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float2D), &vpToSendUp, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpStruct->projectionMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float4x4), &vpStruct->viewMatrix, sizeof(Float4x4));
 	computeShaderResourceFrameData->Unmap(0, nullptr);
+
+	void* dataPtr3;
+	computeShaderResourceLightData->Map(0, &range, &dataPtr3);
+	memcpy(dataPtr3, lightHandler->GatherLightJobs(), sizeof(LightHandler::PointLight) * lightHandler->GetNrOfActiveLights() + sizeof(int) * 4);
+	computeShaderResourceLightData->Unmap(0, nullptr);
+
 
 	vertexOffset = 0;
 	UINT indexOffset = 0;
@@ -1215,7 +1181,6 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&computeShaderResourceHeapSRV);
 	SafeRelease(&computeShaderResourceHeapUAV);
 	SafeRelease(&computeShaderResourceMeshes);
-	SafeRelease(&computeShaderResourceMeshRelatedData);
 	SafeRelease(&computeShaderResourceFrameData);
 	SafeRelease(&computeShaderResourceLightData);
 	SafeRelease(&prePassFence);

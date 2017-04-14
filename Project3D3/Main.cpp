@@ -31,13 +31,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	/*Create the graphics wrapper*/
 	D3D12Wrapper graphics(hInstance, nCmdShow, 1280, 720);
 	EntityHandler entityHandler;
-	CreateEntities(entityHandler);
+	//CreateEntities(entityHandler);
 
-	//Entity* testEnt = entityHandler.CreateEntity();
-	//entityHandler.BindMesh(testEnt, "The_Mighty_Cube2.obj");
+	Entity* testEnt = entityHandler.CreateEntity();
+	entityHandler.BindMesh(testEnt, "Jockes_Mystic_Cube.obj");
 	//Entity* testEnt2 = entityHandler.CreateEntity();
 	//entityHandler.BindMesh(testEnt2, "sphere.obj");
-	//entityHandler.BindTexture(testEnt, "smileCeption.png");
+	entityHandler.BindTexture(testEnt, "dungeonTex.jpg");
 	//entityHandler.BindTexture(testEnt2, "StefanMega.jpg");
 
 	//float pos[3] = { 2.0f, 0.0f, 0.0f };
@@ -161,8 +161,8 @@ void Update(D3D12Wrapper& graphics, EntityHandler & handler)
 	
 	graphics.MoveCamera(cameraPos, cameraRot);
 
-	float position[3] = { 0.0f, -3.0f, 0.0f };
-	float rotation[3] = { 0.0f, stefanRotValue++ / 100.0f, 0.0f };
+	//float position[3] = { 0.0f, -3.0f, 0.0f };
+	//float rotation[3] = { 0.0f, stefanRotValue++ / 100.0f, 0.0f };
 
-	handler.SetTransform(entities[0], position, rotation, 1.0f);
+	//handler.SetTransform(entities[0], position, rotation, 1.0f);
 }
