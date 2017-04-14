@@ -79,14 +79,3 @@ LightHandler::UINT LightHandler::GetNrOfActiveLights()
 	}
 	return activeLights;
 }
-
-LightHandler::UINT LightHandler::GetNrOfActiveLights()
-{
-	UINT activeLights = 0;
-	for (auto &data : pointLightMap)
-	{
-		if (data.second->active)
-			activeLights++;
-	}
-	return activeLights;
-}

@@ -40,7 +40,6 @@ public:
 	void* GatherLightJobs();
 	UINT GetNrOfActiveLights();
 
-	LightHandler::UINT GetNrOfActiveLights();
 
 	
 

@@ -83,24 +83,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
 
-	//for (auto &textureJobs : handler->GetTextureJobs())
-	//{
-	//	//Handle the job
-	//	entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
-
-	//	commandList->Close();
-	//	ID3D12CommandList* listsToExecute[] = { commandList };
-	//	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
-
-	//	WaitForGPU();
-
-	//	commandAllocator->Reset();
-	//	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
-	//	WaitForGPU();
-
-	//}
-	//handler->GetTextureJobs().clear();
-
 	//Set necessary states.
 	commandList->RSSetViewports(1, &vp);
 	commandList->RSSetScissorRects(1, &scissorRect);
@@ -114,85 +96,6 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 
 	UINT index = 0;
-	//static float rotation = 0.0f;
-	//for (auto &transformJobs : handler->GetTransformJobs())
-	//{
-	//	/*Get the constant buffer that contains the transform job -> Update the buffer and bind it*/
-	//	/*Fetch the data here*/
-	//	Float4x4 finalMatrix;
-
-	//	Matrix scaling = MatrixScaling(transformJobs.scale, transformJobs.scale, transformJobs.scale);
-	//	Matrix translation = MatrixTranslation(transformJobs.position[0], transformJobs.position[1], transformJobs.position[2]);
-	//	MatrixToFloat4x4(finalMatrix, MatrixTranspose(scaling * (MatrixRotationAroundAxis(VecCreate(1.0f, 0.0f, 0.0f, 0.0f), transformJobs.rotation[0])*MatrixRotationAroundAxis(VecCreate(0.0f, 1.0f, 0.0f, 0.0f), transformJobs.rotation[1])*MatrixRotationAroundAxis(VecCreate(0.0f, 0.0f, 1.0f, 0.0f), transformJobs.rotation[2]))*translation));
-	//	
-	//	constantBufferHandler->UpdateBuffer(transformJobs.entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, &finalMatrix);
-	//
-	//	//Handle the job
-	//}
-	//handler->GetTransformJobs().clear();
-
-	//for (auto &meshJobs : handler->GetMeshJobs())
-	//{
-	//	//Handle the job
-	//	entities[meshJobs.entityID]->meshID = meshHandler->LoadMesh(meshJobs.fileName);
-	//}
-	//handler->GetMeshJobs().clear();
-
-	//for (auto &lightJobs : handler->GetLightJobs())
-	//{
-	//	//HANDLE IT
-	//}
-
-	//for (auto &pipelineJobs : handler->GetPipelineJobs())
-	//{
-	//	//Handle the job
-	//}
-
-	//int nrOfTriangles = 0;
-	UINT vertexOffset = 0;
-	D3D12_RANGE range = { 0, 0 };
-	//void* dataPtr;
-	//for (int i = 0; i < entities.size(); i++)
-	//{
-	//	if (entities[i]->render)
-	//	{
-
-	//		RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
-
-	//		if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
-	//		{
-	//			// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
-	//			// but for now just a breakpoint, thats an easy solution
-	//			int a = 0;
-	//			a++;
-	//		}
-
-	//		void* bufferData = rData.data;
-	//		computeShaderResourceMeshes->Map(0, &range, &dataPtr);
-	//		memcpy((char*)dataPtr + vertexOffset, bufferData, rData.size);
-	//		computeShaderResourceMeshes->Unmap(0, nullptr);
-
-	//		vertexOffset += rData.nrOfIndices * VERTEXSIZE;
-	//		nrOfTriangles += rData.nrOfTriangles;
-	//	}
-	//}
-	//void* dataPtr2;
-	//ViewProjectionStruct tempVP;
-	//
-	//MatrixToFloat4x4(tempVP.projectionMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->projectionMatrix)))));
-	//MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixTranspose(Float4x4ToMatrix(vpStruct->viewMatrix)))));
-	////MatrixToFloat4x4(tempVP.viewMatrix, MatrixTranspose(MatrixInvert(MatrixViewLH(VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z, 1), VecCreate(camPos.x - 0.0299999993, camPos.y, camPos.z + 1.0f, 1.0f), VecCreate(0.0f, 1.0f, 0.0f, 0.0f)))));
-
-	//computeShaderResourceFrameData->Map(0, &range, &dataPtr2);
-	//memcpy((char*)dataPtr2, &tempVP.projectionMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4), &tempVP.viewMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2, &nrOfTriangles, sizeof(int));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int), &camPos, sizeof(Float3D));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D), &windowWidth, sizeof(UINT32));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32), &windowHeight, sizeof(UINT32));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2, &vpStruct->projectionMatrix, sizeof(Float4x4));
-	//memcpy((char*)dataPtr2 + sizeof(Float4x4) * 2 + sizeof(int) + sizeof(Float3D) + sizeof(UINT32) * 2 + sizeof(Float4x4), &vpStruct->viewMatrix, sizeof(Float4x4));
-	//computeShaderResourceFrameData->Unmap(0, nullptr);
 
 	SetupMeshRendering();
 
@@ -1075,6 +978,7 @@ void D3D12Wrapper::CreatePipelines()
 
 	prePassPipelineID = pipelineHandler->CreatePipeline(rootData3, "PrePassVs.hlsl", "PrePassPS.hlsl", layoutData2);
 
+	InitializeDeferredRendering();
 }
 
 void D3D12Wrapper::DisplayFps()
