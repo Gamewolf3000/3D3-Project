@@ -25,8 +25,9 @@ cbuffer lightBuffer : register(b1)
 float4 main(in float4 screenPos : SV_Position) : SV_TARGET
 {
     int3 sampleIndices = int3(screenPos.xy, 0);
-
+	float shadowValue = shadows.Load(sampleIndices).x;
     float4 pixelColour = float4(colour.Load(sampleIndices).xyz, 1.0f);
+
     float3 normal = normalTexture.Load(sampleIndices).xyz;
     normalTexture.Load(sampleIndices).xyz;
     float4 totalColour = pixelColour*0.05;
@@ -60,5 +61,5 @@ float4 main(in float4 screenPos : SV_Position) : SV_TARGET
         totalColour.xyz += (diffuse + specular) * attenuation;
 
     }
-    return float4(totalColour.xyz*shadows.Load(sampleIndices).x, 1.0f);
+    return float4(totalColour.xyz*shadowValue, 1.0f);
 }

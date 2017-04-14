@@ -4,7 +4,7 @@
 
 #include <map>
 
-#define MAXNROFLIGHTS 10
+#define MAXNROFLIGHTS 100
 
 class LightHandler
 {

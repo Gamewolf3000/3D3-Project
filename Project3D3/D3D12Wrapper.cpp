@@ -32,16 +32,16 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	camPos = Float3D(0.0f, 0.0f, -1.0f);
 
 	float lightColour[4] = { .5f, .5f, 0.5f, 1.0f };
-	float position[4] = { .0f, -3.0f, -4.0f, 1.0f };
+	float position[4] = { .0f, .0f, -4.0f, 1.0f };
 	for (int i = 0; i < MAXNROFLIGHTS; i++)
 	{
-		position[0] = 2.5f*cos(i * 2.0 * JEX_PI / MAXNROFLIGHTS);
-		position[1] = -3.0f + 2.5f*sinf(i * 2 * JEX_PI / MAXNROFLIGHTS);
-		position[2] = 2.5f*sin(i * 2.0 * JEX_PI / MAXNROFLIGHTS);
+		position[0] = 3.5f*cos(i * 2.0 * JEX_PI / MAXNROFLIGHTS);
+		//position[1] = 3.5f*sinf(i * 2 * JEX_PI / MAXNROFLIGHTS);
+		position[2] = 3.5f*sin(i * 2.0 * JEX_PI / MAXNROFLIGHTS);
 		lightColour[0] = abs(2.5f*cos(i * 2.0 * JEX_PI / MAXNROFLIGHTS))*0.15f*(1.0f / MAXNROFLIGHTS);
-		lightColour[1] = abs(-3.0f + 2.5f*sinf(i * 2 * JEX_PI / MAXNROFLIGHTS))*0.15f*(1.0f / MAXNROFLIGHTS);
+		lightColour[1] = abs(3.5f*sinf(i * 2 * JEX_PI / MAXNROFLIGHTS))*0.15f*(1.0f / MAXNROFLIGHTS);
 		lightColour[2] = abs(2.5f*sin(i * 2.0 * JEX_PI / MAXNROFLIGHTS))*.15f*(1.0f / MAXNROFLIGHTS);
-		lightHandler->AddLight(i, lightColour, position, 5.f);
+		lightHandler->AddLight(i, lightColour, position, 4.f);
 	}
 
 	MatrixToFloat4x4(computeCamera.projectionMatrix, MatrixProjectionLH(JEX_PI / 2, 1280.0 / 720.0, 0.1f, 100.0f));
