@@ -4,15 +4,15 @@
 
 #include <map>
 
+#define MAXNROFLIGHTS 10
 
 class LightHandler
 {
 public:
 	struct PointLight
 	{
-		Float4D position;
+		Float4D position_range;
 		Float4D lightColour;
-		Float4D rangeInXRestPadding;
 	};
 
 private:

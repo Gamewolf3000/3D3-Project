@@ -22,8 +22,8 @@ void LightHandler::AddLight(INT8 entityID, float colour[4], float position[4], f
 		newLight->active = true;
 		newLight->lightPtr = new PointLight;
 		newLight->lightPtr->lightColour = Float4D(colour);
-		newLight->lightPtr->position = Float4D(position);
-		newLight->lightPtr->rangeInXRestPadding = Float4D(range, 0.0f, 0.0f, 0.0f);
+		newLight->lightPtr->position_range = Float4D(position);
+		newLight->lightPtr->position_range.w = range;
 		addedLights++;
 		pointLightMap[entityID] = newLight;
 		changeMade = true;

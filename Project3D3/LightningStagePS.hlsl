@@ -5,9 +5,8 @@ Texture2D worldPos : register(t2);
 
 struct lightData
 {
-    float4 lightPos;
+    float4 lightPosxyzRangeW;
     float4 lightColour;
-    float4 rangeInXRestPadding;
 };
 
 cbuffer camera : register(b0)
@@ -18,7 +17,7 @@ cbuffer camera : register(b0)
 cbuffer lightBuffer : register(b1)
 {
     int4 nrOfLightsInX;
-    lightData lights[5];
+    lightData lights[100];
 }
 
 
@@ -34,10 +33,10 @@ float4 main(in float4 screenPos : SV_Position) : SV_TARGET
     for (int i = 0; i < nrOfLightsInX.x; i++)
     {
         /*Compute light here*/
-        float3 lightVector = lights[i].lightPos.xyz - posWorld;
+        float3 lightVector = lights[i].lightPosxyzRangeW.xyz - posWorld;
         float dist = length(lightVector);
         
-        float r = lights[i].rangeInXRestPadding.x;
+        float r = lights[i].lightPosxyzRangeW.w;
         
         float d = max(dist - r, 0);
 
