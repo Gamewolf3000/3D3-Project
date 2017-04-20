@@ -80,6 +80,10 @@ private:
 
 	ID3D12Device* device;
 	ID3D12GraphicsCommandList* commandList;
+	ID3D12GraphicsCommandList* commandListPrePass;
+	ID3D12GraphicsCommandList* commandListComputePass;
+	ID3D12GraphicsCommandList* commandListGeometryPass;
+	ID3D12GraphicsCommandList* commandListPostPass;
 	ID3D12CommandAllocator* commandAllocator;
 	ID3D12CommandQueue* commandQueue;
 
@@ -144,7 +148,9 @@ private:
 	void DisplayFps();
 	void DispatchComputeShader();
 	void CopyDepthBuffer();
+
 	void RenderPrePass(EntityHandler* handler);
+	void RenderGeometryPass(EntityHandler* handler);
 
 	void WaitForGPU();
 
@@ -154,7 +160,7 @@ private:
 	int initialize(HINSTANCE hInstance, int nCmdShow);
 	int Shutdown();
 
-	void ClearBuffer();
+	void ClearBuffer(ID3D12GraphicsCommandList* cmdList);
 	void Present();
 	D3D12Wrapper();
 

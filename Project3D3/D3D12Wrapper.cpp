@@ -72,127 +72,18 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	DisplayFps();
 	timer->Tick();
 
-	const std::vector<Entity*> &entities = handler->GetEntityVector();
+	//const std::vector<Entity*> &entities = handler->GetEntityVector();
 	
-	if (renderPrePass == true)
-	{
-		RenderPrePass(handler);
-		//renderPrePass = false;
-	}
-
-	commandAllocator->Reset();
-	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
-
-	//Set necessary states.
-	commandList->RSSetViewports(1, &vp);
-	commandList->RSSetScissorRects(1, &scissorRect);
-
-
-	pipelineHandler->SetPipelineState(meshPipelineID, commandList);
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
-	constantBufferHandler->UpdateBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
-	constantBufferHandler->BindBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
-
-
-	UINT index = 0;
-
-	SetupMeshRendering();
-
-	D3D12_RANGE range = { 0, 0 };
-	UINT vertexOffset = 0;
-	UINT indexOffset = 0;
-	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
-	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
-	void* dataBegin;
-	index = 0;
-	for (int i = 0; i < entities.size(); i++)
-	{
-		if (entities[i]->render)
-		{
-
-			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
-
-			if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
-			{
-				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
-				// but for now just a breakpoint, thats an easy solution
-				int a = 0;
-				a++;
-			}
-
-			void* bufferData = rData.data;
-			vUpload->Map(0, &range, &dataBegin);
-			memcpy((char*)dataBegin + vertexOffset, bufferData, rData.size);
-			vUpload->Unmap(0, nullptr);
-
-			rData.vBufferView.BufferLocation += vertexOffset;
-
-			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
-
-			//Should work, but is unnecessary
-
-			void* bufferData2 = rData.indexBuffer;
-			void* dataBegin2;
-			iUpload->Map(0, &range, &dataBegin2);
-			memcpy((char*)dataBegin2 + indexOffset, bufferData2, rData.nrOfIndices * sizeof(UINT));
-			iUpload->Unmap(0, nullptr);
-
-			rData.iBufferView.BufferLocation += indexOffset;
-
-			commandList->IASetIndexBuffer(&rData.iBufferView);
-
-
-			if (entities[i]->textureID != -1)
-			{
-				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
-				texHandle.Offset(entities[i]->textureID, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 	
-				commandList->SetDescriptorHeaps(1, &textureHandler->GetTextureHeap());
-				commandList->SetGraphicsRootDescriptorTable(3, texHandle);
-			}
-			else
-			{
-				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
+	RenderPrePass(handler);	
 
-				commandList->SetDescriptorHeaps(1, nullptr);
-				commandList->SetGraphicsRootDescriptorTable(3, texHandle);
-			}
+	DispatchComputeShader();
 
-			CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(computeShaderResourceHeapSRV->GetGPUDescriptorHandleForHeapStart());
-
-			commandList->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
-			commandList->SetGraphicsRootDescriptorTable(4, texHandle);
-
-			//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
-			constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandList);
-
-			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
-			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandList);
-
-			//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
-			commandList->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
-
-			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
-			indexOffset += rData.nrOfIndices * sizeof(UINT);
-
-			index++;
-		}
-	}
-
-	SetResourceTransitionBarrier(commandList,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
-		D3D12_RESOURCE_STATE_PRESENT		//state after
-	);
-
-	FinishMeshRendering();
+	RenderGeometryPass(handler);
 
 	LightPass();
 	
-	commandList->Close();
+	//commandList->Close();
 
 	Present();
 
@@ -348,6 +239,44 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	//Command lists are created in the recording state. Since there is nothing to
 	//record right now and the main loop expects it to be closed, we close it.
 	commandList->Close();
+
+	device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		commandAllocator,
+		nullptr,
+		IID_PPV_ARGS(&commandListPrePass));
+
+	commandListPrePass->Close();
+
+	device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		commandAllocator,
+		nullptr,
+		IID_PPV_ARGS(&commandListComputePass));
+
+	commandListComputePass->Close();
+
+	device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		commandAllocator,
+		nullptr,
+		IID_PPV_ARGS(&commandListGeometryPass));
+
+	commandListGeometryPass->Close();
+
+	device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		commandAllocator,
+		nullptr,
+		IID_PPV_ARGS(&commandListPostPass));
+
+	commandListPostPass->Close();
+
+
 
 	IDXGIFactory4*	factory = nullptr;
 	CreateDXGIFactory(IID_PPV_ARGS(&factory));
@@ -806,42 +735,42 @@ void D3D12Wrapper::InitializeDeferredRendering()
 
 void D3D12Wrapper::SetupMeshRendering()
 {
-	pipelineHandler->SetPipelineState(deferredPipelineID[0], commandList);
-	SetResourceTransitionBarrier(commandList,
+	pipelineHandler->SetPipelineState(deferredPipelineID[0], commandListGeometryPass);
+	SetResourceTransitionBarrier(commandListGeometryPass,
 		GBuffers[GBUFFER_NORMAL],
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
 		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
 	);
-	SetResourceTransitionBarrier(commandList,
+	SetResourceTransitionBarrier(commandListGeometryPass,
 		GBuffers[GBUFFER_COLOUR],
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
 		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
 	);
-	SetResourceTransitionBarrier(commandList,
+	SetResourceTransitionBarrier(commandListGeometryPass,
 		GBuffers[GBUFFER_POS],
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,		//state before
 		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
 	);
-	commandList->OMSetRenderTargets(3, &GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
-	commandList->ClearRenderTargetView(GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), clearColor, 0, nullptr);
+	commandListGeometryPass->OMSetRenderTargets(3, &GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
+	commandListGeometryPass->ClearRenderTargetView(GBufferHeapRendering->GetCPUDescriptorHandleForHeapStart(), clearColor, 0, nullptr);
 
-	commandList->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	commandListGeometryPass->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 }
 
 void D3D12Wrapper::FinishMeshRendering()
 {
-	SetResourceTransitionBarrier(commandList,
+	SetResourceTransitionBarrier(commandListGeometryPass,
 		GBuffers[GBUFFER_NORMAL],
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE		//state after
 	);
-	SetResourceTransitionBarrier(commandList,
+	SetResourceTransitionBarrier(commandListGeometryPass,
 		GBuffers[GBUFFER_COLOUR],
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	//state after
 	);
-	SetResourceTransitionBarrier(commandList,
+	SetResourceTransitionBarrier(commandListGeometryPass,
 		GBuffers[GBUFFER_POS],
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	//state after
@@ -851,48 +780,60 @@ void D3D12Wrapper::FinishMeshRendering()
 
 void D3D12Wrapper::LightPass()
 {
+	commandAllocator->Reset();
+	HRESULT hr = commandListPostPass->Reset(commandAllocator, nullptr);
+
 	//Indicate that the back buffer will be used as render target.
-	SetResourceTransitionBarrier(commandList,
+	SetResourceTransitionBarrier(commandListPostPass,
 		renderTargets[frameIndex],
 		D3D12_RESOURCE_STATE_PRESENT,		//state before
 		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
 	);
 
-	ClearBuffer();
+	ClearBuffer(commandListPostPass);
+	
 
-	pipelineHandler->SetPipelineState(deferredPipelineID[1], commandList);
+	pipelineHandler->SetPipelineState(deferredPipelineID[1], commandListPostPass);
 
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::COMPUTE_CAMERA_POS, commandList);
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::COMPUTE_CAMERA_POS, commandListPostPass);
 	constantBufferHandler->UpdateBuffer(camPosID, ConstantBufferHandler::ConstantBufferType::COMPUTE_CAMERA_POS, &camPos);
 	constantBufferHandler->BindBuffer(camPosID, ConstantBufferHandler::ConstantBufferType::COMPUTE_CAMERA_POS, 0);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::COMPUTE_CAMERA_POS, 0, 0, commandList);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::COMPUTE_CAMERA_POS, 0, 0, commandListPostPass);
 
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandList);
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandListPostPass);
 	constantBufferHandler->UpdateBuffer(lightID, ConstantBufferHandler::ConstantBufferType::PIXEL_SHADER_LIGHT_DATA, lightHandler->GatherLightJobs());
 	constantBufferHandler->BindBuffer(lightID, ConstantBufferHandler::ConstantBufferType::PIXEL_SHADER_LIGHT_DATA, 0);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 1, 0, commandList);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 1, 0, commandListPostPass);
 
 	auto handle = GBufferHeapLightning->GetGPUDescriptorHandleForHeapStart();
 	auto incrementSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	commandList->SetDescriptorHeaps(1, &GBufferHeapLightning);
-	commandList->SetGraphicsRootDescriptorTable(2, handle);
+	commandListPostPass->SetDescriptorHeaps(1, &GBufferHeapLightning);
+	commandListPostPass->SetGraphicsRootDescriptorTable(2, handle);
 	handle.ptr += incrementSize;
-	commandList->SetGraphicsRootDescriptorTable(3, handle);
+	commandListPostPass->SetGraphicsRootDescriptorTable(3, handle);
 	handle.ptr += incrementSize;
-	commandList->SetGraphicsRootDescriptorTable(4, handle);
+	commandListPostPass->SetGraphicsRootDescriptorTable(4, handle);
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(computeShaderResourceHeapSRV->GetGPUDescriptorHandleForHeapStart());
-	commandList->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
-	commandList->SetGraphicsRootDescriptorTable(5, texHandle);
+	commandListPostPass->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
+	commandListPostPass->SetGraphicsRootDescriptorTable(5, texHandle);
 
-	commandList->DrawInstanced(6, 1, 0, 0);
+	commandListPostPass->DrawInstanced(6, 1, 0, 0);
 
-	SetResourceTransitionBarrier(commandList,
+	SetResourceTransitionBarrier(commandListPostPass,
 		renderTargets[frameIndex],
 		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
+
+	commandListPostPass->Close();
+
+	//Execute the command list.
+	ID3D12CommandList* listsToExecute[] = { commandListPostPass };
+	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+
+	WaitForGPU(); // might be unnecessary since we wait in the present function but then we can remove it later, better safe than sorry
 }
 
 void D3D12Wrapper::CreatePipelines()
@@ -1015,9 +956,11 @@ void D3D12Wrapper::DisplayFps()
 
 void D3D12Wrapper::DispatchComputeShader()
 {
-	CopyDepthBuffer();
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-	pipelineHandler->SetComputePipelineState(computePipelineID, commandList);
+	commandAllocator->Reset();
+	HRESULT hr = commandListComputePass->Reset(commandAllocator, nullptr);
+	//CopyDepthBuffer();
+	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+	pipelineHandler->SetComputePipelineState(computePipelineID, commandListComputePass);
 
 	//ID3D12DescriptorHeap* ppHeaps[] = { m_srvUavHeap.Get() };
 	//pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -1028,23 +971,32 @@ void D3D12Wrapper::DispatchComputeShader()
 	//pCommandList->SetComputeRootConstantBufferView(ComputeRootCBV, m_constantBufferCS->GetGPUVirtualAddress());
 	//pCommandList->SetComputeRootDescriptorTable(ComputeRootSRVTable, srvHandle);
 	//pCommandList->SetComputeRootDescriptorTable(ComputeRootUAVTable, uavHandle);
-	commandList->SetDescriptorHeaps(1, &computeShaderResourceHeapUAV);
-	commandList->SetComputeRootDescriptorTable(0, computeShaderResourceHeapUAV->GetGPUDescriptorHandleForHeapStart());
+	commandListComputePass->SetDescriptorHeaps(1, &computeShaderResourceHeapUAV);
+	commandListComputePass->SetComputeRootDescriptorTable(0, computeShaderResourceHeapUAV->GetGPUDescriptorHandleForHeapStart());
 
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE depthDescriptor(computeShaderResourceHeapSRV->GetGPUDescriptorHandleForHeapStart());
 	depthDescriptor.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 
-	commandList->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
-	commandList->SetComputeRootDescriptorTable(1, depthDescriptor);
+	commandListComputePass->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
+	commandListComputePass->SetComputeRootDescriptorTable(1, depthDescriptor);
 
-	commandList->SetComputeRootShaderResourceView(2, computeShaderResourceMeshes->GetGPUVirtualAddress());
-	commandList->SetComputeRootConstantBufferView(3, computeShaderResourceFrameData->GetGPUVirtualAddress());
-	commandList->SetComputeRootConstantBufferView(4, computeShaderResourceLightData->GetGPUVirtualAddress());
+	commandListComputePass->SetComputeRootShaderResourceView(2, computeShaderResourceMeshes->GetGPUVirtualAddress());
+	commandListComputePass->SetComputeRootConstantBufferView(3, computeShaderResourceFrameData->GetGPUVirtualAddress());
+	commandListComputePass->SetComputeRootConstantBufferView(4, computeShaderResourceLightData->GetGPUVirtualAddress());
 
-	commandList->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
+	commandListComputePass->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
 
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	commandListComputePass->Close();
+
+	//Execute the command list.
+	ID3D12CommandList* listsToExecute[] = { commandListComputePass };
+	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+
+	WaitForGPU();
+
 }
 
 void D3D12Wrapper::CopyDepthBuffer()
@@ -1055,9 +1007,9 @@ void D3D12Wrapper::CopyDepthBuffer()
 	const UINT64 fence = fenceValue;
 	hr = commandQueue->Signal(prePassFence, fence);
 	prePassFenceValue++;
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
-	commandList->CopyResource(computeShaderResourceInput, depthstencil);
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	commandListPrePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
+	commandListPrePass->CopyResource(computeShaderResourceInput, depthstencil);
+	commandListPrePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthstencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 }
 
 void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
@@ -1065,42 +1017,42 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 	const std::vector<Entity*> &entities = handler->GetEntityVector();
 
 	commandAllocator->Reset();
-	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+	HRESULT hr = commandListPrePass->Reset(commandAllocator, nullptr);
 
 	for (auto &textureJobs : handler->GetTextureJobs())
 	{
 		//Handle the job
-		entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandList);
+		entities[textureJobs.entityID]->textureID = textureHandler->LoadTextureFromFile(textureJobs.fileName, commandListPrePass);
 
-		commandList->Close();
-		ID3D12CommandList* listsToExecute[] = { commandList };
+		commandListPrePass->Close();
+		ID3D12CommandList* listsToExecute[] = { commandListPrePass };
 		commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
 		WaitForGPU();
 
 		commandAllocator->Reset();
-		HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+		HRESULT hr = commandListPrePass->Reset(commandAllocator, nullptr);
 		WaitForGPU();
 
 	}
 	handler->GetTextureJobs().clear();
 
 	//Set necessary states.
-	commandList->RSSetViewports(1, &vp);
-	commandList->RSSetScissorRects(1, &scissorRect);
+	commandListPrePass->RSSetViewports(1, &vp);
+	commandListPrePass->RSSetScissorRects(1, &scissorRect);
 
 	//Indicate that the back buffer will be used as render target.
-	SetResourceTransitionBarrier(commandList,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_PRESENT,		//state before
-		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
-	);
+	//SetResourceTransitionBarrier(commandListPrePass,
+	//	renderTargets[frameIndex],
+	//	D3D12_RESOURCE_STATE_PRESENT,		//state before
+	//	D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	//);
 
-	ClearBuffer();
+	ClearBuffer(commandListPrePass);
 
-	pipelineHandler->SetPipelineState(prePassPipelineID, commandList);
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandList);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandList);
+	pipelineHandler->SetPipelineState(prePassPipelineID, commandListPrePass);
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandListPrePass);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandListPrePass);
 	constantBufferHandler->UpdateBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
 	constantBufferHandler->BindBuffer(127, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
 
@@ -1231,7 +1183,7 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 			rData.vBufferView.BufferLocation += vertexOffset;
 
-			commandList->IASetVertexBuffers(0, 1, &rData.vBufferView);
+			commandListPrePass->IASetVertexBuffers(0, 1, &rData.vBufferView);
 
 			void* bufferData2 = rData.indexBuffer;
 			void* dataBegin2;
@@ -1241,15 +1193,15 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 			rData.iBufferView.BufferLocation += indexOffset;
 
-			commandList->IASetIndexBuffer(&rData.iBufferView);
+			commandListPrePass->IASetIndexBuffer(&rData.iBufferView);
 
 			//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandList);
+			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandListPrePass);
 			constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandList);
+			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandListPrePass);
 
 			//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
-			commandList->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
+			commandListPrePass->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
 
 			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
 			indexOffset += rData.nrOfIndices * sizeof(UINT);
@@ -1258,18 +1210,142 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 		}
 	}
 
-	SetResourceTransitionBarrier(commandList,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
-		D3D12_RESOURCE_STATE_PRESENT		//state after
-	);
+	//SetResourceTransitionBarrier(commandListPrePass,
+	//	renderTargets[frameIndex],
+	//	D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
+	//	D3D12_RESOURCE_STATE_PRESENT		//state after
+	//);
 
-	DispatchComputeShader();
+	CopyDepthBuffer();
 
-	commandList->Close();
+	commandListPrePass->Close();
 
 	//Execute the command list.
-	ID3D12CommandList* listsToExecute[] = { commandList };
+	ID3D12CommandList* listsToExecute[] = { commandListPrePass };
+	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+
+	WaitForGPU();
+
+}
+
+void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
+{
+	const std::vector<Entity*> &entities = handler->GetEntityVector();
+
+	commandAllocator->Reset();
+	HRESULT hr = commandListGeometryPass->Reset(commandAllocator, nullptr);
+
+	//Set necessary states.
+	commandListGeometryPass->RSSetViewports(1, &vp);
+	commandListGeometryPass->RSSetScissorRects(1, &scissorRect);
+
+
+	pipelineHandler->SetPipelineState(meshPipelineID, commandListGeometryPass);
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandListGeometryPass);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandListGeometryPass);
+	constantBufferHandler->UpdateBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
+	constantBufferHandler->BindBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
+
+
+	UINT index = 0;
+
+	SetupMeshRendering();
+
+	D3D12_RANGE range = { 0, 0 };
+	UINT vertexOffset = 0;
+	UINT indexOffset = 0;
+	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
+	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
+	void* dataBegin;
+	index = 0;
+	for (int i = 0; i < entities.size(); i++)
+	{
+		if (entities[i]->render)
+		{
+
+			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
+
+			if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
+			{
+				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
+				// but for now just a breakpoint, thats an easy solution
+				int a = 0;
+				a++;
+			}
+
+			void* bufferData = rData.data;
+			vUpload->Map(0, &range, &dataBegin);
+			memcpy((char*)dataBegin + vertexOffset, bufferData, rData.size);
+			vUpload->Unmap(0, nullptr);
+
+			rData.vBufferView.BufferLocation += vertexOffset;
+
+			commandListGeometryPass->IASetVertexBuffers(0, 1, &rData.vBufferView);
+
+			//Should work, but is unnecessary
+
+			void* bufferData2 = rData.indexBuffer;
+			void* dataBegin2;
+			iUpload->Map(0, &range, &dataBegin2);
+			memcpy((char*)dataBegin2 + indexOffset, bufferData2, rData.nrOfIndices * sizeof(UINT));
+			iUpload->Unmap(0, nullptr);
+
+			rData.iBufferView.BufferLocation += indexOffset;
+
+			commandListGeometryPass->IASetIndexBuffer(&rData.iBufferView);
+
+
+			if (entities[i]->textureID != -1)
+			{
+				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
+				texHandle.Offset(entities[i]->textureID, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+
+				commandListGeometryPass->SetDescriptorHeaps(1, &textureHandler->GetTextureHeap());
+				commandListGeometryPass->SetGraphicsRootDescriptorTable(3, texHandle);
+			}
+			else
+			{
+				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
+
+				commandListGeometryPass->SetDescriptorHeaps(1, nullptr);
+				commandListGeometryPass->SetGraphicsRootDescriptorTable(3, texHandle);
+			}
+
+			CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(computeShaderResourceHeapSRV->GetGPUDescriptorHandleForHeapStart());
+
+			commandListGeometryPass->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
+			commandListGeometryPass->SetGraphicsRootDescriptorTable(4, texHandle);
+
+			//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandListGeometryPass);
+			constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandListGeometryPass);
+
+			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandListGeometryPass);
+			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandListGeometryPass);
+
+			//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
+			commandListGeometryPass->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
+
+			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
+			indexOffset += rData.nrOfIndices * sizeof(UINT);
+
+			index++;
+		}
+	}
+
+	//SetResourceTransitionBarrier(commandListGeometryPass,
+	//	renderTargets[frameIndex],
+	//	D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
+	//	D3D12_RESOURCE_STATE_PRESENT		//state after
+	//);
+
+	FinishMeshRendering();
+
+	commandListGeometryPass->Close();
+
+	//Execute the command list.
+	ID3D12CommandList* listsToExecute[] = { commandListGeometryPass };
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
 	WaitForGPU();
@@ -1336,8 +1412,8 @@ void D3D12Wrapper::Present()
 {
 	
 	//Execute the command list.
-	ID3D12CommandList* listsToExecute[] = { commandList };
-	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+	//ID3D12CommandList* listsToExecute[] = { commandList };
+	//commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
 	//Present the frame.
 	swapChain->Present(0, 0);
@@ -1395,17 +1471,21 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&computeShaderResourceLightData);
 	SafeRelease(&prePassFence);
 
+	SafeRelease(&commandListPrePass);
+	SafeRelease(&commandListComputePass);
+	SafeRelease(&commandListGeometryPass);
+	SafeRelease(&commandListPostPass);
 
 	return 0;
 }
 
-void D3D12Wrapper::ClearBuffer()
+void D3D12Wrapper::ClearBuffer(ID3D12GraphicsCommandList* cmdList)
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE cdh = renderTargetsHeap->GetCPUDescriptorHandleForHeapStart();
 	cdh.ptr += renderTargetDescriptorSize * frameIndex;
 
-	commandList->OMSetRenderTargets(1, &cdh, true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
-	commandList->ClearRenderTargetView(cdh, clearColor, 0, nullptr);
-	commandList->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	cmdList->OMSetRenderTargets(1, &cdh, true, &depthStencileHeap->GetCPUDescriptorHandleForHeapStart());
+	cmdList->ClearRenderTargetView(cdh, clearColor, 0, nullptr);
+	cmdList->ClearDepthStencilView(depthStencileHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 }
