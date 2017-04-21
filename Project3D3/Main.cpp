@@ -125,47 +125,47 @@ void Update(D3D12Wrapper& graphics, EntityHandler & handler)
 {
 	if ((GetKeyState('A') & 0x80))
 	{
-		cameraPos.x -= 0.01f;
+		cameraPos.x -= 0.1f;
 	}
 	else if ((GetKeyState('D') & 0x80))
 	{
-		cameraPos.x += 0.01f;
+		cameraPos.x += 0.1f;
 	}
 	
 	if ((GetKeyState('W') & 0x80))
 	{
-		cameraPos.z += 0.01f;
+		cameraPos.z += 0.1f;
 	}
 	else if ((GetKeyState('S') & 0x80))
 	{
-		cameraPos.z -= 0.01f;
+		cameraPos.z -= 0.1f;
 	}
 
 	if ((GetKeyState('U') & 0x80))
 	{
-		cameraPos.y += 0.01f;
+		cameraPos.y += 0.1f;
 	}
 	else if ((GetKeyState('N') & 0x80))
 	{
-		cameraPos.y -= 0.01f;
+		cameraPos.y -= 0.1f;
 	}
 
 	if ((GetKeyState('U') & 0x80))
 	{
-		cameraPos.y += 0.01f;
+		cameraPos.y += 0.1f;
 	}
 	else if ((GetKeyState('N') & 0x80))
 	{
-		cameraPos.y -= 0.01f;
+		cameraPos.y -= 0.1f;
 	}
 
 	if ((GetKeyState('Q') & 0x80))
 	{
-		cameraRot -= 0.004f;
+		cameraRot -= 0.1f;
 	}
 	else if ((GetKeyState('E') & 0x80))
 	{
-		cameraRot += 0.004f;
+		cameraRot += 0.1f;
 	}
 	
 	graphics.MoveCamera(cameraPos, cameraRot);
