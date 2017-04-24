@@ -149,10 +149,11 @@ void Pipeline::CreatePipelineStateObject(PipelineData * data, std::string vs, st
 	gpsd.PS.BytecodeLength = pixelBlob->GetBufferSize();
 
 	//Specify render target and depthstencil usage.
-	gpsd.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	gpsd.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	gpsd.NumRenderTargets = 1;
 	if (deferredRendering)
 	{
+		gpsd.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		gpsd.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		gpsd.RTVFormats[2] = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		gpsd.NumRenderTargets = 3;

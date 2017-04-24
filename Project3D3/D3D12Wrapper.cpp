@@ -223,10 +223,13 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	//Describe and create the command queue.
 	D3D12_COMMAND_QUEUE_DESC cqd = {};
 	device->CreateCommandQueue(&cqd, IID_PPV_ARGS(&commandQueue));
+	
 
 	//Create command allocator. The command allocator object corresponds
 	//to the underlying allocations in which GPU commands are stored.
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
+
+
 
 	//Create command list.
 	device->CreateCommandList(
@@ -287,7 +290,7 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	DXGI_SWAP_CHAIN_DESC1 scDesc = {};
 	scDesc.Width = 0;
 	scDesc.Height = 0;
-	scDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	scDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	scDesc.Stereo = FALSE;
 	scDesc.SampleDesc.Count = 1;
 	scDesc.SampleDesc.Quality = 0;
@@ -342,7 +345,17 @@ void D3D12Wrapper::CreateRenderTargets()
 		hr = swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTargets[n]));
 		device->CreateRenderTargetView(renderTargets[n], nullptr, cdh);
 		cdh.ptr += renderTargetDescriptorSize;
-		renderTargets[n]->SetName(L"RenderTarget: " + n);
+		switch (n)
+		{
+		case 0:
+			renderTargets[n]->SetName(L"RenderTarget: 1");
+			break;
+		case 1:
+			renderTargets[n]->SetName(L"RenderTarget: 2");
+			break;
+
+
+		}
 	}
 
 
@@ -718,7 +731,7 @@ void D3D12Wrapper::InitializeDeferredRendering()
 	rootData[1].type.push_back(SRV);
 	rootData[1].visibility.push_back(PIXEL);
 
-	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[1], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, true);
+	deferredPipelineID[1] = pipelineHandler->CreatePipeline(rootData[1], "LightningStageVS.hlsl", "LightningStagePS.hlsl", layoutData, false);
 	
 	/*Set the Render targets as shared resources*/
 	/*Creating a texture heap for the light pass*/
@@ -783,9 +796,11 @@ void D3D12Wrapper::LightPass()
 {
 	commandAllocator->Reset();
 	HRESULT hr = commandListPostPass->Reset(commandAllocator, nullptr);
-
-	ClearBuffer(commandListPostPass);
 	
+	ClearBuffer(commandListPostPass);
+
+	commandListPostPass->RSSetViewports(1, &vp);
+	commandListPostPass->RSSetScissorRects(1, &scissorRect);
 
 	pipelineHandler->SetPipelineState(deferredPipelineID[1], commandListPostPass);
 
@@ -827,7 +842,7 @@ void D3D12Wrapper::LightPass()
 	ID3D12CommandList* listsToExecute[] = { commandListPostPass };
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
-	WaitForGPU(); // might be unnecessary since we wait in the present function but then we can remove it later, better safe than sorry
+	//WaitForGPU(); // might be unnecessary since we wait in the present function but then we can remove it later, better safe than sorry
 }
 
 void D3D12Wrapper::CreatePipelines()
@@ -1241,16 +1256,17 @@ void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
 	commandListGeometryPass->RSSetScissorRects(1, &scissorRect);
 
 
-	pipelineHandler->SetPipelineState(meshPipelineID, commandListGeometryPass);
-	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandListGeometryPass);
-	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandListGeometryPass);
-	constantBufferHandler->UpdateBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
-	constantBufferHandler->BindBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
+	//pipelineHandler->SetPipelineState(meshPipelineID, commandListGeometryPass);
 
 
 	UINT index = 0;
 
 	SetupMeshRendering();
+
+	constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, commandListGeometryPass);
+	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandListGeometryPass);
+	constantBufferHandler->UpdateBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
+	constantBufferHandler->BindBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
 
 	D3D12_RANGE range = { 0, 0 };
 	UINT vertexOffset = 0;

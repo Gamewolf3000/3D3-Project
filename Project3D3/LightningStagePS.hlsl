@@ -24,7 +24,6 @@ cbuffer lightBuffer : register(b1)
 
 float4 main(in float4 screenPos : SV_Position) : SV_TARGET
 {
-	return float4(1.0f, 0.0f, 0.0f, 1.0f);
 	int3 sampleIndices = int3(screenPos.xy, 0);
 	float shadowValue = shadows.Load(sampleIndices).x;
 	float4 pixelColour = float4(colour.Load(sampleIndices).xyz, 1.0f);
