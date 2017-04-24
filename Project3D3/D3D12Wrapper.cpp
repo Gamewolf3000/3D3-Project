@@ -342,6 +342,7 @@ void D3D12Wrapper::CreateRenderTargets()
 		hr = swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTargets[n]));
 		device->CreateRenderTargetView(renderTargets[n], nullptr, cdh);
 		cdh.ptr += renderTargetDescriptorSize;
+		renderTargets[n]->SetName(L"RenderTarget: " + n);
 	}
 
 
@@ -783,13 +784,6 @@ void D3D12Wrapper::LightPass()
 	commandAllocator->Reset();
 	HRESULT hr = commandListPostPass->Reset(commandAllocator, nullptr);
 
-	//Indicate that the back buffer will be used as render target.
-	SetResourceTransitionBarrier(commandListPostPass,
-		renderTargets[frameIndex],
-		D3D12_RESOURCE_STATE_PRESENT,		//state before
-		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
-	);
-
 	ClearBuffer(commandListPostPass);
 	
 
@@ -1047,6 +1041,13 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 	//	D3D12_RESOURCE_STATE_PRESENT,		//state before
 	//	D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
 	//);
+
+	//Indicate that the back buffer will be used as render target.
+	SetResourceTransitionBarrier(commandListPrePass,
+		renderTargets[frameIndex],
+		D3D12_RESOURCE_STATE_PRESENT,		//state before
+		D3D12_RESOURCE_STATE_RENDER_TARGET	//state after
+	);
 
 	ClearBuffer(commandListPrePass);
 
