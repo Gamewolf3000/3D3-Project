@@ -57,6 +57,45 @@ D3D12Wrapper::D3D12Wrapper(HINSTANCE hInstance, int nCmdShow, UINT16 width, UINT
 	std::cout << "We think it worked to create the Wrapper. We don't check that." << std::endl;
 }
 
+void D3D12Wrapper::InitializePerformanceVariables()
+{
+
+	HRESULT hr;
+	commandQueue->GetTimestampFrequency(&timestampFrequency);
+
+	D3D12_QUERY_HEAP_DESC qDesc = {};
+	qDesc.Count = 2;
+	qDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+
+	hr = device->CreateQueryHeap(&qDesc, IID_PPV_ARGS(&queryHeap));
+
+
+	D3D12_HEAP_PROPERTIES hProps = {};
+	hProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	hProps.Type = D3D12_HEAP_TYPE_READBACK;
+	hProps.CreationNodeMask = 0;
+	hProps.VisibleNodeMask = 0;
+	hProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+
+	D3D12_RESOURCE_DESC desc = {};
+
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Width = 16;
+	desc.Height = desc.DepthOrArraySize = desc.MipLevels = 1;
+	desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+
+
+	hr = device->CreateCommittedResource(&hProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&heapData));
+
+
+}
+
 D3D12Wrapper::~D3D12Wrapper()
 {
 	Shutdown();
@@ -797,6 +836,8 @@ void D3D12Wrapper::LightPass()
 	commandAllocator->Reset();
 	HRESULT hr = commandListPostPass->Reset(commandAllocator, nullptr);
 	
+	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0);
+	
 	ClearBuffer(commandListPostPass);
 
 	commandListPostPass->RSSetViewports(1, &vp);
@@ -1415,6 +1456,7 @@ int D3D12Wrapper::initialize(HINSTANCE hInstance, int nCmdShow)
 	CreateRenderTargets();					//5. Create render targets for backbuffer
 	CreateViewportAndScissorRect();
 	CreateDepthStencil();
+	InitializePerformanceVariables();
 
 	commandList->Close();
 	ID3D12CommandList* listsToExecute[] = { commandList };
@@ -1435,6 +1477,37 @@ void D3D12Wrapper::Present()
 	//Present the frame.
 	swapChain->Present(0, 0);
 	WaitForGPU();
+
+	commandAllocator->Reset();
+	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+	
+	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 1);
+
+	commandList->ResolveQueryData(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, heapData, 0);
+
+	commandList->Close();
+
+	ID3D12CommandList* listsToExecute[] = { commandList };
+	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+
+	WaitForGPU();
+
+	struct test 
+	{
+		UINT64 a;
+		UINT64 b;
+	} *data;
+
+	
+
+	D3D12_RANGE range = { 0, 0 };
+
+	heapData->Map(0, &range, (void**)&data);
+
+	auto ab = data->b - data->a;
+	auto res = (data->b-data->a)/(timestampFrequency*1.0);
+
+	heapData->Unmap(0, &range);
 
 	//Swap frame index for next frame.
 	frameIndex = (frameIndex + 1) % NUM_SWAP_BUFFERS;
@@ -1492,6 +1565,9 @@ int D3D12Wrapper::Shutdown()
 	SafeRelease(&commandListComputePass);
 	SafeRelease(&commandListGeometryPass);
 	SafeRelease(&commandListPostPass);
+
+	SafeRelease(&queryHeap);
+	SafeRelease(&heapData);
 
 	return 0;
 }

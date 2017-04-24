@@ -164,6 +164,16 @@ private:
 	void Present();
 	D3D12Wrapper();
 
+	/*-----------------------------------------------------
+	Timing stuff
+	-------------------------------------------------------*/
+
+	UINT64 timestampFrequency = 0;
+	ID3D12QueryHeap* queryHeap;
+	ID3D12Resource* heapData;
+
+	void InitializePerformanceVariables();
+
 
 	/*-----------------------------------------------------
 	Deferred Rendering Specifics Starts Right Here
