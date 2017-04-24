@@ -172,6 +172,14 @@ private:
 	ID3D12QueryHeap* queryHeap;
 	ID3D12Resource* heapData;
 
+	double graphicsDeltaTime;
+
+	struct graphicsTime
+	{
+		UINT64 start;
+		UINT64 end;
+	} *data;
+
 	void InitializePerformanceVariables();
 
 

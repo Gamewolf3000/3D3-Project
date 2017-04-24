@@ -836,8 +836,6 @@ void D3D12Wrapper::LightPass()
 	commandAllocator->Reset();
 	HRESULT hr = commandListPostPass->Reset(commandAllocator, nullptr);
 	
-	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0);
-	
 	ClearBuffer(commandListPostPass);
 
 	commandListPostPass->RSSetViewports(1, &vp);
@@ -996,7 +994,7 @@ void D3D12Wrapper::DisplayFps()
 		std::wostringstream outs;
 		outs.precision(6);
 		outs << L"AWESOME LIGHTING IN D12 THAT MIGHT OR MIGHT NOT WORK INCLUDING SOME KIND OF DEFFERED STUFF FOR PERFOMANCE NOOBS" << L"    " << L"FPS:  " << fps << L"    " << L"Frame Time: " << mspf
-			<< L"  (ms)";
+			<< L"  (ms)" << L"Graphic Timer: " << graphicsDeltaTime*1000.0 << L" ms";
 		SetWindowText(window, outs.str().c_str());
 
 		frameCount = 0;
@@ -1068,6 +1066,7 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 	commandAllocator->Reset();
 	HRESULT hr = commandListPrePass->Reset(commandAllocator, nullptr);
+	commandListPrePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0);
 
 	for (auto &textureJobs : handler->GetTextureJobs())
 	{
@@ -1492,20 +1491,15 @@ void D3D12Wrapper::Present()
 
 	WaitForGPU();
 
-	struct test 
-	{
-		UINT64 a;
-		UINT64 b;
-	} *data;
+	
 
 	
 
 	D3D12_RANGE range = { 0, 0 };
-
+	commandQueue->GetTimestampFrequency(&timestampFrequency);
 	heapData->Map(0, &range, (void**)&data);
 
-	auto ab = data->b - data->a;
-	auto res = (data->b-data->a)/(timestampFrequency*1.0);
+	graphicsDeltaTime = (data->end-data->start)/(timestampFrequency*1.0);
 
 	heapData->Unmap(0, &range);
 
