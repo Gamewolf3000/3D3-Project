@@ -23,6 +23,30 @@
 #include <sstream>
 
 #define NUM_SWAP_BUFFERS 2
+#define NUM_TIME_STAMPS 5
+
+enum TimeStampIdentifiers
+{
+	TOTAL_TIME,
+	LIGHT_TIME,
+	COMPUTE_TIME,
+	GEOMETRY_TIME,
+	PREPASS_TIME
+};
+
+enum TimeStampStartEnd
+{
+	TOTAL_TIME_START,
+	TOTAL_TIME_END,
+	LIGHT_TIME_START,
+	LIGHT_TIME_END,
+	COMPUTE_TIME_START,
+	COMPUTE_TIME_END,
+	GEOMETRY_TIME_START,
+	GEOMETRY_TIME_END,
+	PREPASS_TIME_START,
+	PREPASS_TIME_END
+};
 
 template<class Interface>
 inline void SafeRelease(
@@ -172,14 +196,21 @@ private:
 	ID3D12QueryHeap* queryHeap;
 	ID3D12Resource* heapData;
 
-	double graphicsDeltaTime;
+	double graphicsDeltaTime = 0.0;;
+	double prePassTime = 0.0;;
+	double computeTime = 0.0;
+	double geometryTime = 0.0;
+	double lightTime = 0.0;
+	UINT64 frames = 0;
 
-	struct graphicsTime
+	struct GraphicTimeStamps
 	{
-		UINT64 start;
-		UINT64 end;
+		struct times
+		{
+			UINT64 start;
+			UINT64 end;
+		} timeStamps[NUM_TIME_STAMPS];
 	} *data;
-
 	void InitializePerformanceVariables();
 
 
