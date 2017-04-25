@@ -22,6 +22,7 @@
 
 #include <sstream>
 
+#define NUM_EXTRA_LOOPS 1000
 #define NUM_SWAP_BUFFERS 2
 #define NUM_TIME_STAMPS 5
 
@@ -109,6 +110,8 @@ private:
 	ID3D12GraphicsCommandList* commandListGeometryPass;
 	ID3D12GraphicsCommandList* commandListPostPass;
 	ID3D12CommandAllocator* commandAllocator;
+	ID3D12CommandAllocator* computeAllocator;
+	ID3D12CommandQueue* computeQueue;
 	ID3D12CommandQueue* commandQueue;
 
 	IDXGISwapChain* swapChain;
@@ -177,6 +180,7 @@ private:
 	void RenderGeometryPass(EntityHandler* handler);
 
 	void WaitForGPU();
+	void WaitForCompute();
 
 	void SetResourceTransitionBarrier(ID3D12GraphicsCommandList* commandList, ID3D12Resource* resource,
 		D3D12_RESOURCE_STATES StateBefore, D3D12_RESOURCE_STATES StateAfter);

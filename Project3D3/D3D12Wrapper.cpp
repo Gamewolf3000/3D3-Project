@@ -120,6 +120,9 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 	RenderGeometryPass(handler);
 
+	WaitForGPU();
+	WaitForCompute();
+
 	LightPass();
 	
 	//commandList->Close();
@@ -258,20 +261,23 @@ void D3D12Wrapper::CreateDirect3DDevice()
 
 void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 {
-
+	HRESULT hr;
 	//Describe and create the command queue.
 	D3D12_COMMAND_QUEUE_DESC cqd = {};
-	device->CreateCommandQueue(&cqd, IID_PPV_ARGS(&commandQueue));
-	
+	hr = device->CreateCommandQueue(&cqd, IID_PPV_ARGS(&commandQueue));
+
+	cqd.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+
+	hr = device->CreateCommandQueue(&cqd, IID_PPV_ARGS(&computeQueue));
 
 	//Create command allocator. The command allocator object corresponds
 	//to the underlying allocations in which GPU commands are stored.
-	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
-
+	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
+	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&computeAllocator));
 
 
 	//Create command list.
-	device->CreateCommandList(
+	hr = device->CreateCommandList(
 		0,
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		commandAllocator,
@@ -282,7 +288,7 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	//record right now and the main loop expects it to be closed, we close it.
 	commandList->Close();
 
-	device->CreateCommandList(
+	hr = device->CreateCommandList(
 		0,
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		commandAllocator,
@@ -291,16 +297,16 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 
 	commandListPrePass->Close();
 
-	device->CreateCommandList(
+	hr = device->CreateCommandList(
 		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		commandAllocator,
+		D3D12_COMMAND_LIST_TYPE_COMPUTE,
+		computeAllocator,
 		nullptr,
 		IID_PPV_ARGS(&commandListComputePass));
 
 	commandListComputePass->Close();
 
-	device->CreateCommandList(
+	hr = device->CreateCommandList(
 		0,
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		commandAllocator,
@@ -309,7 +315,7 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 
 	commandListGeometryPass->Close();
 
-	device->CreateCommandList(
+	hr = device->CreateCommandList(
 		0,
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		commandAllocator,
@@ -340,7 +346,7 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	scDesc.Flags = 0;
 	scDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 
-	HRESULT hr = factory->CreateSwapChainForHwnd(
+	 hr = factory->CreateSwapChainForHwnd(
 		commandQueue,
 		window,
 		&scDesc,
@@ -835,7 +841,6 @@ void D3D12Wrapper::LightPass()
 {
 	commandAllocator->Reset();
 	HRESULT hr = commandListPostPass->Reset(commandAllocator, nullptr);
-	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, GEOMETRY_TIME_END);
 	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, LIGHT_TIME_START);
 	
 	ClearBuffer(commandListPostPass);
@@ -1006,8 +1011,8 @@ void D3D12Wrapper::DisplayFps()
 
 void D3D12Wrapper::DispatchComputeShader()
 {
-	commandAllocator->Reset();
-	HRESULT hr = commandListComputePass->Reset(commandAllocator, nullptr);
+	computeAllocator->Reset();
+	HRESULT hr = commandListComputePass->Reset(computeAllocator, nullptr);
 	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, PREPASS_TIME_END);
 	//CopyDepthBuffer();
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
@@ -1037,16 +1042,15 @@ void D3D12Wrapper::DispatchComputeShader()
 	commandListComputePass->SetComputeRootConstantBufferView(4, computeShaderResourceLightData->GetGPUVirtualAddress());
 	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_START);
 	commandListComputePass->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
-	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_END);
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
+	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_END);
 	commandListComputePass->Close();
 
 	//Execute the command list.
 	ID3D12CommandList* listsToExecute[] = { commandListComputePass };
-	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+	computeQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
-	WaitForGPU();
 
 }
 
@@ -1320,6 +1324,7 @@ void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
 	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
 	void* dataBegin;
 	index = 0;
+	
 	for (int i = 0; i < entities.size(); i++)
 	{
 		if (entities[i]->render)
@@ -1404,13 +1409,13 @@ void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
 
 	FinishMeshRendering();
 
+	commandListGeometryPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, GEOMETRY_TIME_END);
 	commandListGeometryPass->Close();
 
 	//Execute the command list.
 	ID3D12CommandList* listsToExecute[] = { commandListGeometryPass };
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
-	WaitForGPU();
 }
 
 void D3D12Wrapper::WaitForGPU()
@@ -1431,6 +1436,26 @@ void D3D12Wrapper::WaitForGPU()
 		WaitForSingleObject(eventHandle, INFINITE);
 	}
 	
+}
+
+void D3D12Wrapper::WaitForCompute()
+{
+	//WAITING FOR EACH FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
+	//This is code implemented as such for simplicity. The cpu could for example be used
+	//for other tasks to prepare the next frame while the current one is being rendered.
+
+	//Signal and increment the fence value.
+	const UINT64 fence = fenceValue;
+	computeQueue->Signal(this->fence, fence);
+	fenceValue++;
+
+	//Wait until command queue is done.
+	if (this->fence->GetCompletedValue() < fence)
+	{
+		this->fence->SetEventOnCompletion(fence, eventHandle);
+		WaitForSingleObject(eventHandle, INFINITE);
+	}
+
 }
 
 void D3D12Wrapper::SetResourceTransitionBarrier(ID3D12GraphicsCommandList * commandList, ID3D12Resource * resource, D3D12_RESOURCE_STATES StateBefore, D3D12_RESOURCE_STATES StateAfter)
@@ -1531,7 +1556,9 @@ int D3D12Wrapper::Shutdown()
 	CloseHandle(eventHandle);
 	SafeRelease(&device);
 	SafeRelease(&commandQueue);
+	SafeRelease(&computeQueue);
 	SafeRelease(&commandAllocator);
+	SafeRelease(&computeAllocator);
 	SafeRelease(&commandList);
 	SafeRelease(&swapChain);
 
