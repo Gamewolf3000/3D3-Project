@@ -109,7 +109,9 @@ private:
 	ID3D12GraphicsCommandList* commandListGeometryPass;
 	ID3D12GraphicsCommandList* commandListPostPass;
 	ID3D12CommandAllocator* commandAllocator;
+	ID3D12CommandAllocator* computeAllocator;
 	ID3D12CommandQueue* commandQueue;
+	ID3D12CommandQueue* computeQueue;
 
 	IDXGISwapChain* swapChain;
 

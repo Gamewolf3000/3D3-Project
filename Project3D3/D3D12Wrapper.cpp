@@ -262,12 +262,15 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 	//Describe and create the command queue.
 	D3D12_COMMAND_QUEUE_DESC cqd = {};
 	device->CreateCommandQueue(&cqd, IID_PPV_ARGS(&commandQueue));
+	cqd.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+	device->CreateCommandQueue(&cqd, IID_PPV_ARGS(&computeQueue));
+
 	
 
 	//Create command allocator. The command allocator object corresponds
 	//to the underlying allocations in which GPU commands are stored.
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
-
+	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&computeAllocator));
 
 
 	//Create command list.
@@ -293,8 +296,8 @@ void D3D12Wrapper::CreateCommandInterfacesAndSwapChain()
 
 	device->CreateCommandList(
 		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		commandAllocator,
+		D3D12_COMMAND_LIST_TYPE_COMPUTE,
+		computeAllocator,
 		nullptr,
 		IID_PPV_ARGS(&commandListComputePass));
 
@@ -1006,8 +1009,8 @@ void D3D12Wrapper::DisplayFps()
 
 void D3D12Wrapper::DispatchComputeShader()
 {
-	commandAllocator->Reset();
-	HRESULT hr = commandListComputePass->Reset(commandAllocator, nullptr);
+	computeAllocator->Reset();
+	HRESULT hr = commandListComputePass->Reset(computeAllocator, nullptr);
 	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, PREPASS_TIME_END);
 	//CopyDepthBuffer();
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
@@ -1044,7 +1047,7 @@ void D3D12Wrapper::DispatchComputeShader()
 
 	//Execute the command list.
 	ID3D12CommandList* listsToExecute[] = { commandListComputePass };
-	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+	computeQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
 	WaitForGPU();
 
