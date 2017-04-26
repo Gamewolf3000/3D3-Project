@@ -24,13 +24,17 @@ PSOutput main(in vertexData data) : SV_Target
 	outPut.normal = data.normal;
 	outPut.worldPos = data.wPos;
 	bool test = outPut.worldPos != 0;
+	bool test2 = outPut.worldPos != 0;
+	bool test3 = outPut.worldPos != 0;
 
 	for (int i = 0; i < 2000; i++)
 	{
-		outPut.worldPos = float4(sampleTexture.Sample(samplerState, (data.uv + float2((i % 75)*0.000002, (i % 3)*0.000002))).xyz, 1.0f) + outPut.worldPos;
-		test = i;
+		test = float4(sampleTexture.Sample(samplerState, (data.uv + float2(i *0.000002, i *0.000002))).xyz, 1.0f) + test3;
+		test2 = float4(sampleTexture.Sample(samplerState, (data.uv + float2(i *0.000002, i *0.000002))).xyz, 1.0f) + test2;
+		test3 = float4(sampleTexture.Sample(samplerState, (data.uv + float2(i*0.000002, i*0.000002))).xyz, 1.0f) + test;
+		outPut.worldPos = test + test2 + test3;
 	}
-	if (test)
+	if (test && test2 && test3)
 		outPut.worldPos = data.wPos;
 	return outPut;
 }
