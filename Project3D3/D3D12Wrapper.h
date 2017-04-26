@@ -179,6 +179,9 @@ private:
 	void RenderPrePass(EntityHandler* handler);
 	void RenderGeometryPass(EntityHandler* handler);
 
+	void StartTimer();
+	void EndTimer();
+
 	void WaitForGPU();
 	void WaitForCompute();
 
