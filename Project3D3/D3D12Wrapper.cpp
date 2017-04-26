@@ -1461,10 +1461,29 @@ void D3D12Wrapper::EndTimer()
 	lightTime += (data->timeStamps[LIGHT_TIME].end - data->timeStamps[LIGHT_TIME].start) / (timestampFrequency*1.0);
 
 	frames++;
-	printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",
-		(graphicsDeltaTime*1000.0) / frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
-
+	
 	heapData->Unmap(0, &range);
+
+	if ((frames % 100) == 0)
+	{
+		printf("\n\n\n");
+		printf("Test Results for Frame %I64d:\n", frames);
+		printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",
+			(graphicsDeltaTime*1000.0) / frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
+		printf("\n");
+		printf("Start PrePass: %I64d \t End PrePass: %I64d\n", data->timeStamps[PREPASS_TIME].start, data->timeStamps[PREPASS_TIME].end);
+		printf("Start ComputePass: %I64d \t End ComputePass: %I64d\n", data->timeStamps[COMPUTE_TIME].start, data->timeStamps[COMPUTE_TIME].end);
+		printf("Start GeometryPass: %I64d \t End GeometryPass: %I64d\n", data->timeStamps[GEOMETRY_TIME].start, data->timeStamps[GEOMETRY_TIME].end);
+		printf("Start LightPass: %I64d \t End LightPass: %I64d\n", data->timeStamps[LIGHT_TIME].start, data->timeStamps[LIGHT_TIME].end);
+		if (frames == NUM_FRAMES)
+		{
+			printf("Done");
+			getchar();
+			getchar();
+			getchar();
+		}
+	}
+	
 }
 
 void D3D12Wrapper::WaitForGPU()
@@ -1568,6 +1587,8 @@ int D3D12Wrapper::Shutdown()
 	CloseHandle(eventHandle);
 	SafeRelease(&device);
 	SafeRelease(&commandQueue);
+	SafeRelease(&computeQueue);
+	SafeRelease(&computeAllocator);
 	SafeRelease(&commandAllocator);
 	SafeRelease(&commandList);
 	SafeRelease(&swapChain);

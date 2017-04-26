@@ -22,6 +22,7 @@
 
 #include <sstream>
 
+#define NUM_FRAMES 1000
 #define NUM_SWAP_BUFFERS 2
 #define NUM_TIME_STAMPS 5
 

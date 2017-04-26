@@ -23,7 +23,7 @@ PSOutput main(in vertexData data) : SV_Target
 	outPut.colour = float4(sampleTexture.Sample(samplerState, data.uv).xyz, 1.0f);
 	outPut.normal = data.normal;
 	outPut.worldPos = data.wPos;
-	bool test = outPut.worldPos != 0;
+	/*bool test = outPut.worldPos != 0;
 
 	for (int i = 0; i < 2000; i++)
 	{
@@ -31,6 +31,6 @@ PSOutput main(in vertexData data) : SV_Target
 		test = i;
 	}
 	if (test)
-		outPut.worldPos = data.wPos;
+		outPut.worldPos = data.wPos;*/
 	return outPut;
 }
