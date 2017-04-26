@@ -24,7 +24,7 @@ PSOutput main(in vertexData data) : SV_Target
 	outPut.normal = data.normal;
 	outPut.worldPos = data.wPos;
 
-	bool test = outPut.worldPos != 0;
+	/*bool test = outPut.worldPos != 0;
 
 	for (int i = 0; i < 2000; i++)
 	{
@@ -32,7 +32,7 @@ PSOutput main(in vertexData data) : SV_Target
 		test = i;
 	}
 	if (test)
-		outPut.worldPos = data.wPos;
+		outPut.worldPos = data.wPos;*/
 
 	return outPut;
 }
