@@ -122,8 +122,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	DispatchComputeShader();
 	RenderGeometryPass(handler);
 
-	WaitForCompute();
 	WaitForGPU();
+	WaitForCompute();
 
 	LightPass();
 	WaitForGPU();
