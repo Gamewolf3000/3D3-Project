@@ -120,8 +120,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 	RenderGeometryPass(handler);
 
-	WaitForGPU();
 	WaitForCompute();
+	WaitForGPU();
 
 	LightPass();
 	
@@ -882,6 +882,7 @@ void D3D12Wrapper::LightPass()
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
 
+	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, LIGHT_TIME_END);
 	commandListPostPass->Close();
 
 	//Execute the command list.
@@ -890,7 +891,6 @@ void D3D12Wrapper::LightPass()
 
 	//WaitForGPU(); // might be unnecessary since we wait in the present function but then we can remove it later, better safe than sorry
 }
-
 void D3D12Wrapper::CreatePipelines()
 {
 	RootSignatureData rootData;
@@ -986,6 +986,7 @@ void D3D12Wrapper::CreatePipelines()
 	InitializeDeferredRendering();
 }
 
+
 void D3D12Wrapper::DisplayFps()
 {
 	static int frameCount = 0;
@@ -1013,7 +1014,7 @@ void D3D12Wrapper::DispatchComputeShader()
 {
 	computeAllocator->Reset();
 	HRESULT hr = commandListComputePass->Reset(computeAllocator, nullptr);
-	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, PREPASS_TIME_END);
+	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_START);
 	//CopyDepthBuffer();
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 	pipelineHandler->SetComputePipelineState(computePipelineID, commandListComputePass);
@@ -1040,7 +1041,6 @@ void D3D12Wrapper::DispatchComputeShader()
 	commandListComputePass->SetComputeRootShaderResourceView(2, computeShaderResourceMeshes->GetGPUVirtualAddress());
 	commandListComputePass->SetComputeRootConstantBufferView(3, computeShaderResourceFrameData->GetGPUVirtualAddress());
 	commandListComputePass->SetComputeRootConstantBufferView(4, computeShaderResourceLightData->GetGPUVirtualAddress());
-	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_START);
 	commandListComputePass->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
@@ -1282,6 +1282,7 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 	CopyDepthBuffer();
 
+	commandListPrePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, PREPASS_TIME_END);
 	commandListPrePass->Close();
 
 	//Execute the command list.
@@ -1316,6 +1317,7 @@ void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
 	constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 1, 0, commandListGeometryPass);
 	constantBufferHandler->UpdateBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, vpStruct);
 	constantBufferHandler->BindBuffer(viewProjID, ConstantBufferHandler::VERTEX_SHADER_PER_FRAME_DATA, 0);
+	
 
 	D3D12_RANGE range = { 0, 0 };
 	UINT vertexOffset = 0;
@@ -1323,84 +1325,85 @@ void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
 	ID3D12Resource* vUpload = meshHandler->GetVertexUploadBuffer();
 	ID3D12Resource* iUpload = meshHandler->GetIndexUploadBuffer();
 	void* dataBegin;
-	index = 0;
 	
-	for (int i = 0; i < entities.size(); i++)
-	{
-		if (entities[i]->render)
+		index = 0;
+
+		for (int i = 0; i < entities.size(); i++)
 		{
-
-			RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
-
-			if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
+			if (entities[i]->render)
 			{
-				// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
-				// but for now just a breakpoint, thats an easy solution
-				int a = 0;
-				a++;
+
+				RenderData rData = meshHandler->GetMeshAsRawData(entities[i]->meshID);
+
+				if (vertexOffset + rData.nrOfIndices * VERTEXSIZE > HEAP_SIZE)
+				{
+					// in here we should take care of sending what we have so far, potentially we should send what we can from this mesh as well so as to maximize the usage
+					// but for now just a breakpoint, thats an easy solution
+					int a = 0;
+					a++;
+				}
+
+				void* bufferData = rData.data;
+				vUpload->Map(0, &range, &dataBegin);
+				memcpy((char*)dataBegin + vertexOffset, bufferData, rData.size);
+				vUpload->Unmap(0, nullptr);
+
+				rData.vBufferView.BufferLocation += vertexOffset;
+
+				commandListGeometryPass->IASetVertexBuffers(0, 1, &rData.vBufferView);
+
+				//Should work, but is unnecessary
+
+				void* bufferData2 = rData.indexBuffer;
+				void* dataBegin2;
+				iUpload->Map(0, &range, &dataBegin2);
+				memcpy((char*)dataBegin2 + indexOffset, bufferData2, rData.nrOfIndices * sizeof(UINT));
+				iUpload->Unmap(0, nullptr);
+
+				rData.iBufferView.BufferLocation += indexOffset;
+
+				commandListGeometryPass->IASetIndexBuffer(&rData.iBufferView);
+
+
+				if (entities[i]->textureID != -1)
+				{
+					CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
+					texHandle.Offset(entities[i]->textureID, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+
+					commandListGeometryPass->SetDescriptorHeaps(1, &textureHandler->GetTextureHeap());
+					commandListGeometryPass->SetGraphicsRootDescriptorTable(3, texHandle);
+				}
+				else
+				{
+					CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
+
+					commandListGeometryPass->SetDescriptorHeaps(1, nullptr);
+					commandListGeometryPass->SetGraphicsRootDescriptorTable(3, texHandle);
+				}
+
+				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(computeShaderResourceHeapSRV->GetGPUDescriptorHandleForHeapStart());
+
+				commandListGeometryPass->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
+				commandListGeometryPass->SetGraphicsRootDescriptorTable(4, texHandle);
+
+				//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+				constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandListGeometryPass);
+				constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
+				constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandListGeometryPass);
+
+				constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandListGeometryPass);
+				constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandListGeometryPass);
+
+				//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
+				commandListGeometryPass->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
+
+				vertexOffset += rData.nrOfIndices * VERTEXSIZE;
+				indexOffset += rData.nrOfIndices * sizeof(UINT);
+
+				index++;
 			}
-
-			void* bufferData = rData.data;
-			vUpload->Map(0, &range, &dataBegin);
-			memcpy((char*)dataBegin + vertexOffset, bufferData, rData.size);
-			vUpload->Unmap(0, nullptr);
-
-			rData.vBufferView.BufferLocation += vertexOffset;
-
-			commandListGeometryPass->IASetVertexBuffers(0, 1, &rData.vBufferView);
-
-			//Should work, but is unnecessary
-
-			void* bufferData2 = rData.indexBuffer;
-			void* dataBegin2;
-			iUpload->Map(0, &range, &dataBegin2);
-			memcpy((char*)dataBegin2 + indexOffset, bufferData2, rData.nrOfIndices * sizeof(UINT));
-			iUpload->Unmap(0, nullptr);
-
-			rData.iBufferView.BufferLocation += indexOffset;
-
-			commandListGeometryPass->IASetIndexBuffer(&rData.iBufferView);
-
-
-			if (entities[i]->textureID != -1)
-			{
-				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
-				texHandle.Offset(entities[i]->textureID, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
-				commandListGeometryPass->SetDescriptorHeaps(1, &textureHandler->GetTextureHeap());
-				commandListGeometryPass->SetGraphicsRootDescriptorTable(3, texHandle);
-			}
-			else
-			{
-				CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(textureHandler->GetTextureHeap()->GetGPUDescriptorHandleForHeapStart());
-
-				commandListGeometryPass->SetDescriptorHeaps(1, nullptr);
-				commandListGeometryPass->SetGraphicsRootDescriptorTable(3, texHandle);
-			}
-
-			CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(computeShaderResourceHeapSRV->GetGPUDescriptorHandleForHeapStart());
-
-			commandListGeometryPass->SetDescriptorHeaps(1, &computeShaderResourceHeapSRV);
-			commandListGeometryPass->SetGraphicsRootDescriptorTable(4, texHandle);
-
-			//constantBufferHandler->BindBuffer(0/*REPLACE 0 with ID!*/, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, commandListGeometryPass);
-			constantBufferHandler->BindBuffer(entities[i]->entityID, ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, index);
-			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::VERTEX_SHADER_PER_OBJECT_DATA, 0, index*device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), commandListGeometryPass);
-
-			constantBufferHandler->SetDescriptorHeap(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, commandListGeometryPass);
-			constantBufferHandler->SetGraphicsRoot(ConstantBufferHandler::PIXEL_SHADER_LIGHT_DATA, 2, 0, commandListGeometryPass);
-
-			//commandList->DrawInstanced(rData.nrOfIndices, 1, 0, 0);
-			commandListGeometryPass->DrawIndexedInstanced(rData.nrOfIndices, 1, 0, 0, 0);
-
-			vertexOffset += rData.nrOfIndices * VERTEXSIZE;
-			indexOffset += rData.nrOfIndices * sizeof(UINT);
-
-			index++;
 		}
-	}
-
+	
 	//SetResourceTransitionBarrier(commandListGeometryPass,
 	//	renderTargets[frameIndex],
 	//	D3D12_RESOURCE_STATE_RENDER_TARGET,	//state before
@@ -1423,6 +1426,7 @@ void D3D12Wrapper::WaitForGPU()
 	//WAITING FOR EACH FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
 	//This is code implemented as such for simplicity. The cpu could for example be used
 	//for other tasks to prepare the next frame while the current one is being rendered.
+	
 
 	//Signal and increment the fence value.
 	const UINT64 fence = fenceValue;
@@ -1510,7 +1514,6 @@ void D3D12Wrapper::Present()
 	commandAllocator->Reset();
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
 
-	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, LIGHT_TIME_END);
 	
 	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, TOTAL_TIME_END);
 
@@ -1542,7 +1545,7 @@ void D3D12Wrapper::Present()
 
 	heapData->Unmap(0, &range);
 
-	//Swap frame index for next frame.
+	//Swap frame index for next frame. 
 	frameIndex = (frameIndex + 1) % NUM_SWAP_BUFFERS;
 
 

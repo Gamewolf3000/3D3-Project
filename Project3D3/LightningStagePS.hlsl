@@ -36,6 +36,9 @@ float4 main(in float4 screenPos : SV_Position) : SV_TARGET
 	{
 		/*Compute light here*/
 		float3 lightVector = lights[i].lightPosxyzRangeW.xyz - posWorld;
+		float3 savedVector = lightVector;
+
+
 		float dist = length(lightVector);
 		
 		float r = lights[i].lightPosxyzRangeW.w;
