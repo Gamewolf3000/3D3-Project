@@ -178,7 +178,11 @@ private:
 	void RenderPrePass(EntityHandler* handler);
 	void RenderGeometryPass(EntityHandler* handler);
 
+	void StartTimer();
+	void EndTimer();
+
 	void WaitForGPU();
+	void WaitForCompute();
 
 	void SetResourceTransitionBarrier(ID3D12GraphicsCommandList* commandList, ID3D12Resource* resource,
 		D3D12_RESOURCE_STATES StateBefore, D3D12_RESOURCE_STATES StateAfter);

@@ -113,18 +113,22 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 
 	//const std::vector<Entity*> &entities = handler->GetEntityVector();
 	
-	
+	StartTimer();
+	WaitForGPU();
 	RenderPrePass(handler);	
-
+	WaitForGPU();
 	DispatchComputeShader();
-
+	WaitForCompute();
 	RenderGeometryPass(handler);
-
+	WaitForGPU();
 	LightPass();
-	
+	WaitForGPU();
 	//commandList->Close();
 
 	Present();
+	WaitForGPU();
+	EndTimer();
+	WaitForGPU();
 
 }
 
@@ -838,7 +842,6 @@ void D3D12Wrapper::LightPass()
 {
 	commandAllocator->Reset();
 	HRESULT hr = commandListPostPass->Reset(commandAllocator, nullptr);
-	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, GEOMETRY_TIME_END);
 	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, LIGHT_TIME_START);
 	
 	ClearBuffer(commandListPostPass);
@@ -880,6 +883,7 @@ void D3D12Wrapper::LightPass()
 		D3D12_RESOURCE_STATE_PRESENT		//state after
 	);
 
+	commandListPostPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, LIGHT_TIME_END);
 	commandListPostPass->Close();
 
 	//Execute the command list.
@@ -1011,7 +1015,7 @@ void D3D12Wrapper::DispatchComputeShader()
 {
 	computeAllocator->Reset();
 	HRESULT hr = commandListComputePass->Reset(computeAllocator, nullptr);
-	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, PREPASS_TIME_END);
+	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_START);
 	//CopyDepthBuffer();
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 	pipelineHandler->SetComputePipelineState(computePipelineID, commandListComputePass);
@@ -1038,18 +1042,16 @@ void D3D12Wrapper::DispatchComputeShader()
 	commandListComputePass->SetComputeRootShaderResourceView(2, computeShaderResourceMeshes->GetGPUVirtualAddress());
 	commandListComputePass->SetComputeRootConstantBufferView(3, computeShaderResourceFrameData->GetGPUVirtualAddress());
 	commandListComputePass->SetComputeRootConstantBufferView(4, computeShaderResourceLightData->GetGPUVirtualAddress());
-	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_START);
 	commandListComputePass->Dispatch(80, 45, 1); // Threads matching a resolution of 1280x720 together with the partitioning in the compute shader
-	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_END);
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
+	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_END);
 	commandListComputePass->Close();
 
 	//Execute the command list.
 	ID3D12CommandList* listsToExecute[] = { commandListComputePass };
 	computeQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
-	WaitForGPU();
 
 }
 
@@ -1072,7 +1074,6 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 	commandAllocator->Reset();
 	HRESULT hr = commandListPrePass->Reset(commandAllocator, nullptr);
-	commandListPrePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, TOTAL_TIME_START);
 	commandListPrePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, PREPASS_TIME_START);
 
 	for (auto &textureJobs : handler->GetTextureJobs())
@@ -1281,13 +1282,13 @@ void D3D12Wrapper::RenderPrePass(EntityHandler* handler)
 
 	CopyDepthBuffer();
 
+	commandListPrePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, PREPASS_TIME_END);
 	commandListPrePass->Close();
 
 	//Execute the command list.
 	ID3D12CommandList* listsToExecute[] = { commandListPrePass };
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
-	WaitForGPU();
 
 }
 
@@ -1407,13 +1408,63 @@ void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
 
 	FinishMeshRendering();
 
+	commandListGeometryPass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, GEOMETRY_TIME_END);
 	commandListGeometryPass->Close();
 
 	//Execute the command list.
 	ID3D12CommandList* listsToExecute[] = { commandListGeometryPass };
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 
+}
+
+void D3D12Wrapper::StartTimer()
+{
+	commandAllocator->Reset();
+	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, TOTAL_TIME_START);
+
+	commandList->Close();
+
+	ID3D12CommandList* listsToExecute[] = { commandList };
+	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+}
+
+void D3D12Wrapper::EndTimer()
+{
+
+	commandAllocator->Reset();
+	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+
+
+	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, TOTAL_TIME_END);
+
+	commandList->ResolveQueryData(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, 2 * NUM_TIME_STAMPS, heapData, 0);
+
+	commandList->Close();
+
+	ID3D12CommandList* listsToExecute[] = { commandList };
+	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
+
 	WaitForGPU();
+
+
+	D3D12_RANGE range = { 0, 0 };
+	data = nullptr;
+	commandQueue->GetTimestampFrequency(&timestampFrequency);
+	heapData->Map(0, &range, (void**)&data);
+
+
+	graphicsDeltaTime += (data->timeStamps[TOTAL_TIME].end - data->timeStamps[TOTAL_TIME].start) / (timestampFrequency*1.0);
+	prePassTime += (data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start) / (timestampFrequency*1.0);
+	computeTime += (data->timeStamps[COMPUTE_TIME].end - data->timeStamps[COMPUTE_TIME].start) / (timestampFrequency*1.0);
+	geometryTime += (data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[GEOMETRY_TIME].start) / (timestampFrequency*1.0);
+	lightTime += (data->timeStamps[LIGHT_TIME].end - data->timeStamps[LIGHT_TIME].start) / (timestampFrequency*1.0);
+
+	frames++;
+	printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",
+		(graphicsDeltaTime*1000.0) / frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
+
+	heapData->Unmap(0, &range);
 }
 
 void D3D12Wrapper::WaitForGPU()
@@ -1434,6 +1485,25 @@ void D3D12Wrapper::WaitForGPU()
 		WaitForSingleObject(eventHandle, INFINITE);
 	}
 	
+}
+void D3D12Wrapper::WaitForCompute()
+{
+	//WAITING FOR EACH FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
+	//This is code implemented as such for simplicity. The cpu could for example be used
+	//for other tasks to prepare the next frame while the current one is being rendered.
+
+	//Signal and increment the fence value.
+	const UINT64 fence = fenceValue;
+	computeQueue->Signal(this->fence, fence);
+	fenceValue++;
+
+	//Wait until command queue is done.
+	if (this->fence->GetCompletedValue() < fence)
+	{
+		this->fence->SetEventOnCompletion(fence, eventHandle);
+		WaitForSingleObject(eventHandle, INFINITE);
+	}
+
 }
 
 void D3D12Wrapper::SetResourceTransitionBarrier(ID3D12GraphicsCommandList * commandList, ID3D12Resource * resource, D3D12_RESOURCE_STATES StateBefore, D3D12_RESOURCE_STATES StateAfter)
@@ -1483,42 +1553,6 @@ void D3D12Wrapper::Present()
 
 	//Present the frame.
 	swapChain->Present(0, 0);
-	WaitForGPU();
-
-	commandAllocator->Reset();
-	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
-
-	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, LIGHT_TIME_END);
-	
-	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, TOTAL_TIME_END);
-
-	commandList->ResolveQueryData(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, 2*NUM_TIME_STAMPS, heapData, 0);
-
-	commandList->Close();
-
-	ID3D12CommandList* listsToExecute[] = { commandList };
-	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
-
-	WaitForGPU();
-
-
-	D3D12_RANGE range = { 0, 0 };
-	data = nullptr;
-	commandQueue->GetTimestampFrequency(&timestampFrequency);
-	heapData->Map(0, &range, (void**)&data);
-	
-
-	graphicsDeltaTime += (data->timeStamps[TOTAL_TIME].end-data->timeStamps[TOTAL_TIME].start)/(timestampFrequency*1.0);
-	prePassTime += (data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start) / (timestampFrequency*1.0);
-	computeTime += (data->timeStamps[COMPUTE_TIME].end - data->timeStamps[COMPUTE_TIME].start) / (timestampFrequency*1.0);
-	geometryTime += (data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[GEOMETRY_TIME].start) / (timestampFrequency*1.0);
-	lightTime += (data->timeStamps[LIGHT_TIME].end-data->timeStamps[LIGHT_TIME].start) / (timestampFrequency*1.0);
-	
-	frames++;
-	printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n", 
-		(graphicsDeltaTime*1000.0)/frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
-
-	heapData->Unmap(0, &range);
 
 	//Swap frame index for next frame.
 	frameIndex = (frameIndex + 1) % NUM_SWAP_BUFFERS;
