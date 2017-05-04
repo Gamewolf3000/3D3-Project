@@ -61,7 +61,7 @@ void D3D12Wrapper::InitializePerformanceVariables()
 {
 
 	HRESULT hr;
-	commandQueue->GetTimestampFrequency(&timestampFrequency);
+	commandQueue->GetTimestampFrequency(&timestampFrequency[0]);
 
 	D3D12_QUERY_HEAP_DESC qDesc = {};
 	qDesc.Count = 2*NUM_TIME_STAMPS;
@@ -1019,6 +1019,7 @@ void D3D12Wrapper::DispatchComputeShader()
 	computeAllocator->Reset();
 	HRESULT hr = commandListComputePass->Reset(computeAllocator, nullptr);
 	commandListComputePass->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, COMPUTE_TIME_START);
+	
 	//CopyDepthBuffer();
 	commandListComputePass->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(computeShaderResourceOutput, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 	pipelineHandler->SetComputePipelineState(computePipelineID, commandListComputePass);
@@ -1457,15 +1458,28 @@ void D3D12Wrapper::EndTimer()
 
 	D3D12_RANGE range = { 0, 0 };
 	data = nullptr;
-	commandQueue->GetTimestampFrequency(&timestampFrequency);
+	
+	UINT64 CPUCalibration[2];
+	UINT64 GPUCalibration[2];
+
+
+	commandQueue->GetTimestampFrequency(&timestampFrequency[0]);
+	commandQueue->GetClockCalibration(&GPUCalibration[0], &CPUCalibration[0]);
+	computeQueue->GetClockCalibration(&GPUCalibration[1], &CPUCalibration[1]);
+	
+	//Change this shit
+	auto difference = GPUCalibration[1] - GPUCalibration[0] - (CPUCalibration[1] - CPUCalibration[0]);
+
+
+	computeQueue->GetTimestampFrequency(&timestampFrequency[1]);
 	heapData->Map(0, &range, (void**)&data);
 
 
-	graphicsDeltaTime += (data->timeStamps[TOTAL_TIME].end - data->timeStamps[TOTAL_TIME].start) / (timestampFrequency*1.0);
-	prePassTime += (data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start) / (timestampFrequency*1.0);
-	computeTime += (data->timeStamps[COMPUTE_TIME].end - data->timeStamps[COMPUTE_TIME].start) / (timestampFrequency*1.0);
-	geometryTime += (data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[GEOMETRY_TIME].start) / (timestampFrequency*1.0);
-	lightTime += (data->timeStamps[LIGHT_TIME].end - data->timeStamps[LIGHT_TIME].start) / (timestampFrequency*1.0);
+	graphicsDeltaTime += (data->timeStamps[TOTAL_TIME].end - data->timeStamps[TOTAL_TIME].start) / (timestampFrequency[0]*1.0);
+	prePassTime += (data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start) / (timestampFrequency[0]*1.0);
+	computeTime += ((data->timeStamps[COMPUTE_TIME].end - data->timeStamps[COMPUTE_TIME].start)-difference) / (timestampFrequency[1]*1.0);
+	geometryTime += (data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[GEOMETRY_TIME].start) / (timestampFrequency[0]*1.0);
+	lightTime += (data->timeStamps[LIGHT_TIME].end - data->timeStamps[LIGHT_TIME].start) / (timestampFrequency[0]*1.0);
 
 	frames++;
 	printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",

@@ -199,7 +199,7 @@ private:
 	Timing stuff
 	-------------------------------------------------------*/
 
-	UINT64 timestampFrequency = 0;
+	UINT64 timestampFrequency[2] = { 0,0 };
 	ID3D12QueryHeap* queryHeap;
 	ID3D12Resource* heapData;
 
