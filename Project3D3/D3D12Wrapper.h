@@ -211,6 +211,9 @@ private:
 	double lightTime = 0.0;
 	UINT64 frames = 0;
 
+	UINT64 CPUCalibration[2];
+	UINT64 GPUCalibration[2];
+
 	struct GraphicTimeStamps
 	{
 		struct times
