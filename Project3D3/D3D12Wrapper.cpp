@@ -1471,69 +1471,90 @@ void D3D12Wrapper::EndTimer()
 
 	//Change this shit
 	UINT64 offset = 0;
-	if (GPUCalibration[0] < GPUCalibration[1])
-	{
-		offset = GPUCalibration[1] - GPUCalibration[0];
-		graphicsDeltaTime += ((data->timeStamps[TOTAL_TIME].end) - (data->timeStamps[TOTAL_TIME].start))/(timestampFrequency[0]*1.0);
-		prePassTime += ((data->timeStamps[PREPASS_TIME].end) - (data->timeStamps[PREPASS_TIME].start))/(timestampFrequency[0]*1.0);
-		computeTime += ((data->timeStamps[COMPUTE_TIME].end - offset) - (data->timeStamps[COMPUTE_TIME].start - offset))/(timestampFrequency[0]*1.0);
-		geometryTime += ((data->timeStamps[GEOMETRY_TIME].end) - (data->timeStamps[GEOMETRY_TIME].start))/(timestampFrequency[0]*1.0);
-		lightTime += ((data->timeStamps[LIGHT_TIME].end) - (data->timeStamps[LIGHT_TIME].start))/(timestampFrequency[0]*1.0);
+	if (frames < NUM_FRAMES)
+		if (GPUCalibration[0] < GPUCalibration[1])
+		{
+			offset = GPUCalibration[1] - GPUCalibration[0] - (CPUCalibration[1] - CPUCalibration[0]);
+			graphicsDeltaTime += ((data->timeStamps[TOTAL_TIME].end) - (data->timeStamps[TOTAL_TIME].start)) / (timestampFrequency[0] * 1.0);
+			prePassTime += ((data->timeStamps[PREPASS_TIME].end) - (data->timeStamps[PREPASS_TIME].start)) / (timestampFrequency[0] * 1.0);
+			computeTime += ((data->timeStamps[COMPUTE_TIME].end - offset) - (data->timeStamps[COMPUTE_TIME].start - offset)) / (timestampFrequency[0] * 1.0);
+			geometryTime += ((data->timeStamps[GEOMETRY_TIME].end) - (data->timeStamps[GEOMETRY_TIME].start)) / (timestampFrequency[0] * 1.0);
+			lightTime += ((data->timeStamps[LIGHT_TIME].end) - (data->timeStamps[LIGHT_TIME].start)) / (timestampFrequency[0] * 1.0);
+			times[frames].timeStamps[TOTAL_TIME].end = data->timeStamps[TOTAL_TIME].end;
+			times[frames].timeStamps[TOTAL_TIME].start = data->timeStamps[TOTAL_TIME].start;
+			times[frames].timeStamps[PREPASS_TIME].end = data->timeStamps[PREPASS_TIME].end;
+			times[frames].timeStamps[PREPASS_TIME].start = data->timeStamps[PREPASS_TIME].start;
+			times[frames].timeStamps[COMPUTE_TIME].end = data->timeStamps[COMPUTE_TIME].end - offset;
+			times[frames].timeStamps[COMPUTE_TIME].start = data->timeStamps[COMPUTE_TIME].start - offset;
+			times[frames].timeStamps[GEOMETRY_TIME].end = data->timeStamps[GEOMETRY_TIME].end;
+			times[frames].timeStamps[GEOMETRY_TIME].start = data->timeStamps[GEOMETRY_TIME].start;
+			times[frames].timeStamps[LIGHT_TIME].end = data->timeStamps[LIGHT_TIME].end;
+			times[frames].timeStamps[LIGHT_TIME].start = data->timeStamps[LIGHT_TIME].start;
 
-		frames++;
-		if ((frames % 100) == 0)
-		{
-			printf("\n\n\n");
-			printf("Test Results for Frame %I64d:\n", frames);
-			printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",
-				(graphicsDeltaTime*1000.0) / frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
-			printf("\n");
-			printf("Offset: %I64d\n", offset);
-			printf("Start PrePass: %I64d \t End PrePass: %I64d\n", data->timeStamps[PREPASS_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start);
-			printf("Start ComputePass: %I64d \t End ComputePass: %I64d\n", data->timeStamps[COMPUTE_TIME].start - offset - data->timeStamps[PREPASS_TIME].start, data->timeStamps[COMPUTE_TIME].end - offset - data->timeStamps[PREPASS_TIME].start);
-			printf("Start GeometryPass: %I64d \t End GeometryPass: %I64d\n", data->timeStamps[GEOMETRY_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[PREPASS_TIME].start);
-			printf("Start LightPass: %I64d \t End LightPass: %I64d\n", data->timeStamps[LIGHT_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[LIGHT_TIME].end - data->timeStamps[PREPASS_TIME].start);
-			if (frames == NUM_FRAMES)
+			frames++;
+			if ((frames % 100) == 0)
 			{
-				printf("Done");
-				getchar();
-				getchar();
-				getchar();
+				printf("\n\n\n");
+				printf("Test Results for Frame %I64d:\n", frames);
+				printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",
+					(graphicsDeltaTime*1000.0) / frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
+				printf("\n");
+				printf("Offset: %I64d\n", offset);
+				printf("Start PrePass: %I64d \t End PrePass: %I64d\n", data->timeStamps[PREPASS_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start);
+				printf("Start ComputePass: %I64d \t End ComputePass: %I64d\n", data->timeStamps[COMPUTE_TIME].start - offset - data->timeStamps[PREPASS_TIME].start, data->timeStamps[COMPUTE_TIME].end - offset - data->timeStamps[PREPASS_TIME].start);
+				printf("Start GeometryPass: %I64d \t End GeometryPass: %I64d\n", data->timeStamps[GEOMETRY_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[PREPASS_TIME].start);
+				printf("Start LightPass: %I64d \t End LightPass: %I64d\n", data->timeStamps[LIGHT_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[LIGHT_TIME].end - data->timeStamps[PREPASS_TIME].start);
+				if (frames == NUM_FRAMES)
+				{
+					printf("Done");
+					getchar();
+					getchar();
+					getchar();
+				}
 			}
 		}
-	}
-	else
-	{
-		offset = GPUCalibration[0] - GPUCalibration[1];
-		graphicsDeltaTime += ((data->timeStamps[TOTAL_TIME].end - offset) - (data->timeStamps[TOTAL_TIME].start - offset))/(timestampFrequency[0]*1.0);
-		prePassTime += ((data->timeStamps[PREPASS_TIME].end - offset) - (data->timeStamps[PREPASS_TIME].start - offset))/(timestampFrequency[0]*1.0);
-		computeTime += ((data->timeStamps[COMPUTE_TIME].end) - (data->timeStamps[COMPUTE_TIME].start))/(timestampFrequency[0]*1.0);
-		geometryTime += ((data->timeStamps[GEOMETRY_TIME].end - offset) - (data->timeStamps[GEOMETRY_TIME].start - offset))/(timestampFrequency[0]*1.0);
-		lightTime += ((data->timeStamps[LIGHT_TIME].end - offset) - (data->timeStamps[LIGHT_TIME].start - offset))/(timestampFrequency[0]*1.0);
-		frames++;
-		
-		frames++;
-		if ((frames % 100) == 0)
+		else
 		{
-			printf("\n\n\n");
-			printf("Test Results for Frame %I64d:\n", frames);
-			printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",
-				(graphicsDeltaTime*1000.0) / frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
-			printf("\n");
-			printf("Offset: %I64d\n", offset);
-			printf("Start PrePass: %I64d \t End PrePass: %I64d\n", data->timeStamps[PREPASS_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start);
-			printf("Start ComputePass: %I64d \t End ComputePass: %I64d\n", data->timeStamps[COMPUTE_TIME].start + offset - data->timeStamps[PREPASS_TIME].start, data->timeStamps[COMPUTE_TIME].end + offset - data->timeStamps[PREPASS_TIME].start);
-			printf("Start GeometryPass: %I64d \t End GeometryPass: %I64d\n", data->timeStamps[GEOMETRY_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[PREPASS_TIME].start);
-			printf("Start LightPass: %I64d \t End LightPass: %I64d\n", data->timeStamps[LIGHT_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[LIGHT_TIME].end - data->timeStamps[PREPASS_TIME].start);
-			if (frames == NUM_FRAMES)
+			offset = GPUCalibration[0] - GPUCalibration[1] - (CPUCalibration[0] - CPUCalibration[1]);
+			graphicsDeltaTime += ((data->timeStamps[TOTAL_TIME].end - offset) - (data->timeStamps[TOTAL_TIME].start - offset)) / (timestampFrequency[0] * 1.0);
+			prePassTime += ((data->timeStamps[PREPASS_TIME].end - offset) - (data->timeStamps[PREPASS_TIME].start - offset)) / (timestampFrequency[0] * 1.0);
+			computeTime += ((data->timeStamps[COMPUTE_TIME].end) - (data->timeStamps[COMPUTE_TIME].start)) / (timestampFrequency[0] * 1.0);
+			geometryTime += ((data->timeStamps[GEOMETRY_TIME].end - offset) - (data->timeStamps[GEOMETRY_TIME].start - offset)) / (timestampFrequency[0] * 1.0);
+			lightTime += ((data->timeStamps[LIGHT_TIME].end - offset) - (data->timeStamps[LIGHT_TIME].start - offset)) / (timestampFrequency[0] * 1.0);
+
+			times[frames].timeStamps[TOTAL_TIME].end = data->timeStamps[TOTAL_TIME].end - offset;
+			times[frames].timeStamps[TOTAL_TIME].start = data->timeStamps[TOTAL_TIME].start - offset;
+			times[frames].timeStamps[PREPASS_TIME].end = data->timeStamps[PREPASS_TIME].end - offset;
+			times[frames].timeStamps[PREPASS_TIME].start = data->timeStamps[PREPASS_TIME].start - offset;
+			times[frames].timeStamps[COMPUTE_TIME].end = data->timeStamps[COMPUTE_TIME].end;
+			times[frames].timeStamps[COMPUTE_TIME].start = data->timeStamps[COMPUTE_TIME].start;
+			times[frames].timeStamps[GEOMETRY_TIME].end = data->timeStamps[GEOMETRY_TIME].end - offset;
+			times[frames].timeStamps[GEOMETRY_TIME].start = data->timeStamps[GEOMETRY_TIME].start - offset;
+			times[frames].timeStamps[LIGHT_TIME].end = data->timeStamps[LIGHT_TIME].end - offset;
+			times[frames].timeStamps[LIGHT_TIME].start = data->timeStamps[LIGHT_TIME].start - offset;
+
+			frames++;
+			if ((frames % 100) == 0)
 			{
-				printf("Done");
-				getchar();
-				getchar();
-				getchar();
+				printf("\n\n\n");
+				printf("Test Results for Frame %I64d:\n", frames);
+				printf("GraphicsDeltaTime: %lf PrePassTime: %lf ComputeTime: %lf GeometryTime: %lf LightTime: %lf\n",
+					(graphicsDeltaTime*1000.0) / frames, (prePassTime*1000.0) / frames, (computeTime*1000.0) / frames, (geometryTime*1000.0) / frames, (lightTime*1000.0) / frames);
+				printf("\n");
+				printf("Offset: %I64d\n", offset);
+				printf("Start PrePass: %I64d \t End PrePass: %I64d\n", data->timeStamps[PREPASS_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start);
+				printf("Start ComputePass: %I64d \t End ComputePass: %I64d\n", data->timeStamps[COMPUTE_TIME].start + offset - data->timeStamps[PREPASS_TIME].start, data->timeStamps[COMPUTE_TIME].end + offset - data->timeStamps[PREPASS_TIME].start);
+				printf("Start GeometryPass: %I64d \t End GeometryPass: %I64d\n", data->timeStamps[GEOMETRY_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[PREPASS_TIME].start);
+				printf("Start LightPass: %I64d \t End LightPass: %I64d\n", data->timeStamps[LIGHT_TIME].start - data->timeStamps[PREPASS_TIME].start, data->timeStamps[LIGHT_TIME].end - data->timeStamps[PREPASS_TIME].start);
+				if (frames == NUM_FRAMES)
+				{
+					printf("Done");
+					getchar();
+					getchar();
+					getchar();
+				}
 			}
 		}
-	}
 
 
 
@@ -1639,7 +1660,31 @@ void D3D12Wrapper::Present()
 int D3D12Wrapper::Shutdown()
 {
 	WaitForGPU();
-
+	std::ofstream file;
+	file.open("Data.txt", std::ifstream::out);
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		file << times[i].timeStamps[TOTAL_TIME].end;
+		file << "\t";
+		file << times[i].timeStamps[TOTAL_TIME].start;
+		file << "\t";
+		file << times[i].timeStamps[PREPASS_TIME].end;
+		file << "\t";
+		file << times[i].timeStamps[PREPASS_TIME].start;
+		file << "\t";
+		file << times[i].timeStamps[COMPUTE_TIME].end;
+		file << "\t";
+		file << times[i].timeStamps[COMPUTE_TIME].start;
+		file << "\t";
+		file << times[i].timeStamps[GEOMETRY_TIME].end;
+		file << "\t";
+		file << times[i].timeStamps[GEOMETRY_TIME].start;
+		file << "\t";
+		file << times[i].timeStamps[LIGHT_TIME].end;
+		file << "\t";
+		file << times[i].timeStamps[LIGHT_TIME].start;
+		file << std::endl;
+	}
 
 	CloseHandle(eventHandle);
 	SafeRelease(&device);
