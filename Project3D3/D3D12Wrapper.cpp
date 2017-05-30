@@ -61,7 +61,7 @@ void D3D12Wrapper::InitializePerformanceVariables()
 {
 
 	HRESULT hr;
-	commandQueue->GetTimestampFrequency(&timestampFrequency);
+	commandQueue->GetTimestampFrequency(timestampFrequency);
 
 	D3D12_QUERY_HEAP_DESC qDesc = {};
 	qDesc.Count = 2*NUM_TIME_STAMPS;
@@ -1454,17 +1454,16 @@ void D3D12Wrapper::EndTimer()
 
 	D3D12_RANGE range = { 0, 0 };
 	data = nullptr;
-	commandQueue->GetTimestampFrequency(&timestampFrequency);
+	commandQueue->GetTimestampFrequency(timestampFrequency);
 	heapData->Map(0, &range, (void**)&data);
 
 
-	graphicsDeltaTime += (data->timeStamps[TOTAL_TIME].end - data->timeStamps[TOTAL_TIME].start) / (timestampFrequency*1.0);
-	prePassTime += (data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start) / (timestampFrequency*1.0);
-	computeTime += (data->timeStamps[COMPUTE_TIME].end - data->timeStamps[COMPUTE_TIME].start) / (timestampFrequency*1.0);
-	geometryTime += (data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[GEOMETRY_TIME].start) / (timestampFrequency*1.0);
-	lightTime += (data->timeStamps[LIGHT_TIME].end - data->timeStamps[LIGHT_TIME].start) / (timestampFrequency*1.0);
+	graphicsDeltaTime += (data->timeStamps[TOTAL_TIME].end - data->timeStamps[TOTAL_TIME].start) / (timestampFrequency[0]*1.0);
+	prePassTime += (data->timeStamps[PREPASS_TIME].end - data->timeStamps[PREPASS_TIME].start) / (timestampFrequency[0] *1.0);
+	computeTime += (data->timeStamps[COMPUTE_TIME].end - data->timeStamps[COMPUTE_TIME].start) / (timestampFrequency[0] *1.0);
+	geometryTime += (data->timeStamps[GEOMETRY_TIME].end - data->timeStamps[GEOMETRY_TIME].start) / (timestampFrequency[0] *1.0);
+	lightTime += (data->timeStamps[LIGHT_TIME].end - data->timeStamps[LIGHT_TIME].start) / (timestampFrequency[0] *1.0);
 
-	frames++;
 	
 	heapData->Unmap(0, &range);
 	UINT64 offset;
