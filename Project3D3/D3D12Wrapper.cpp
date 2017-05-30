@@ -1420,12 +1420,16 @@ void D3D12Wrapper::RenderGeometryPass(EntityHandler * handler)
 void D3D12Wrapper::StartTimer()
 {
 	commandAllocator->Reset();
+
 	HRESULT hr = commandList->Reset(commandAllocator, nullptr);
+
 	commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, TOTAL_TIME_START);
 
 	commandList->Close();
 
 	ID3D12CommandList* listsToExecute[] = { commandList };
+	commandQueue->GetClockCalibration(&GPUCalibration[0], &CPUCalibration[0]);
+	computeQueue->GetClockCalibration(&GPUCalibration[1], &CPUCalibration[1]);
 	commandQueue->ExecuteCommandLists(ARRAYSIZE(listsToExecute), listsToExecute);
 }
 
