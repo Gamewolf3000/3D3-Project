@@ -21,6 +21,7 @@
 #include "LightHandler.h"
 
 #include <sstream>
+#include <fstream>
 
 #define NUM_FRAMES 1000
 #define NUM_SWAP_BUFFERS 2
@@ -218,6 +219,7 @@ private:
 			UINT64 end;
 		} timeStamps[NUM_TIME_STAMPS];
 	} *data;
+	GraphicTimeStamps times[NUM_FRAMES];
 	void InitializePerformanceVariables();
 
 
