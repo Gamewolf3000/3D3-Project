@@ -118,8 +118,8 @@ void D3D12Wrapper::Render(EntityHandler* handler)
 	RenderPrePass(handler);	
 	WaitForGPU();
 	DispatchComputeShader();
-	WaitForCompute();
 	RenderGeometryPass(handler);
+	WaitForCompute();
 	WaitForGPU();
 	LightPass();
 	WaitForGPU();
@@ -1467,7 +1467,7 @@ void D3D12Wrapper::EndTimer()
 	frames++;
 	
 	heapData->Unmap(0, &range);
-
+	UINT64 offset;
 	if (frames < NUM_FRAMES)
 		if (GPUCalibration[0] < GPUCalibration[1])
 		{
